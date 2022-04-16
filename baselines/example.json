@@ -1,0 +1,152 @@
+{
+	"metadata": {
+		"schema_version": "0.0",
+		"title": "Für Elise",
+		"creators": [
+			"Ludwig van Beethoven"
+		],
+		"copyright": null,
+		"collection": "Example dataset",
+		"source_filename": "example.json",
+		"source_format": "json"
+	},
+	"resolution": 24,
+	"tempos": [
+		{
+			"time": 0,
+			"qpm": 72
+		}
+	],
+	"key_signatures": [
+		{
+			"time": 0,
+			"root": 9,
+			"mode": "minor"
+		}
+	],
+	"time_signatures": [
+		{
+			"time": 0,
+			"numerator": 3,
+			"denominator": 8
+		}
+	],
+	"barlines": [
+		{
+            "time": 0
+        },
+        {
+            "time": 12
+        },
+        {
+            "time": 48
+        }
+    ],
+	"beats": [
+        {
+            "time": 0
+        },
+        {
+            "time": 12
+        },
+        {
+            "time": 24
+        },
+        {
+            "time": 36
+        },
+        {
+            "time": 48
+        }
+    ],
+	"lyrics": [
+		{
+			"time": 0,
+			"lyric": "Nothing but a lyric"
+		}
+	],
+	"annotations": [
+		{
+			"time": 0,
+			"annotation": "Nothing but an annotation",
+			"group": null
+		}
+	],
+	"tracks": [
+		{
+			"program": 0,
+			"is_drum": false,
+			"name": "Melody",
+			"notes": [
+				{
+					"time": 0,
+					"duration": 6,
+					"pitch": 76,
+					"velocity": 64
+				},
+				{
+					"time": 6,
+					"duration": 6,
+					"pitch": 75,
+					"velocity": 64
+				},
+				{
+					"time": 12,
+					"duration": 6,
+					"pitch": 76,
+					"velocity": 64
+				},
+				{
+					"time": 18,
+					"duration": 6,
+					"pitch": 75,
+					"velocity": 64
+				},
+				{
+					"time": 24,
+					"duration": 6,
+					"pitch": 76,
+					"velocity": 64
+				},
+				{
+					"time": 30,
+					"duration": 6,
+					"pitch": 71,
+					"velocity": 64
+				},
+				{
+					"time": 36,
+					"duration": 6,
+					"pitch": 74,
+					"velocity": 64
+				},
+				{
+					"time": 42,
+					"duration": 6,
+					"pitch": 72,
+					"velocity": 64
+				},
+				{
+					"time": 48,
+					"duration": 6,
+					"pitch": 69,
+					"velocity": 64
+				}
+			],
+			"chords": null,
+			"lyrics": [
+				{
+					"time": 0,
+					"lyric": "Nothing but a lyric"
+				}
+			],
+			"annotations": [
+				{
+					"time": 0,
+					"annotation": "Nothing but an annotation",
+					"group": null
+				}
+			]
+		}
+	]
+}

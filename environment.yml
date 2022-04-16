@@ -1,0 +1,21 @@
+name: orchnet
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.9
+  - ffmpeg=4.3.1
+  - fluidsynth=2.2.5
+  - pip=22.0.4
+  - numpy=1.22.3
+  - scipy=1.8.0
+  - matplotlib=3.5.1
+  - tqdm=4.64.0
+  - cudatoolkit=10.2
+  - pytorch::pytorch=1.11.0
+  - pylint
+  - black
+  - flake8
+  - pip:
+    - git+https://github.com/salu133445/muspy@main#egg=muspy
+    - x-transformers==0.25.9
