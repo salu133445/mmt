@@ -372,14 +372,15 @@ def main():
                 for idx in range(6):
                     total_losses[idx] += float(losses[idx])
         val_loss = total_loss / count
+        individual_losses = [l / count for l in total_losses]
         logging.info(f"Validation loss: {val_loss:.4f}")
         logging.info(
-            f"Individual losses: type={total_losses[0] / count:.4f}, "
-            f"beat: {total_losses[1] / count:.4f}, "
-            f"position: {total_losses[2] / count:.4f}, "
-            f"pitch: {total_losses[3] / count:.4f}, "
-            f"duration: {total_losses[4] / count:.4f}, "
-            f"instrument: {total_losses[5] / count:.4f}"
+            f"Individual losses: type={individual_losses[0]:.4f}, "
+            f"beat: {individual_losses[1]:.4f}, "
+            f"position: {individual_losses[2]:.4f}, "
+            f"pitch: {individual_losses[3]:.4f}, "
+            f"duration: {individual_losses[4]:.4f}, "
+            f"instrument: {individual_losses[5]:.4f}"
         )
 
         # Release GPU memory right away
@@ -387,9 +388,10 @@ def main():
 
         # Write losses to file
         loss_csv.write(
-            f"{step},{train_loss},{val_loss},{total_losses[0]},"
-            f"{total_losses[1]},{total_losses[2]},{total_losses[3]},"
-            f"{total_losses[4]},{total_losses[5]}\n"
+            f"{step},{train_loss},{val_loss},{individual_losses[0]},"
+            f"{individual_losses[1]},{individual_losses[2]},"
+            f"{individual_losses[3]},{individual_losses[4]},"
+            f"{individual_losses[5]}\n"
         )
 
         # Save the model

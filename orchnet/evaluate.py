@@ -2,10 +2,10 @@ import argparse
 import logging
 import pathlib
 import pprint
-import subprocess
 import sys
+from collections import defaultdict
 
-import matplotlib.pyplot as plt
+import muspy
 import numpy as np
 import torch
 import torch.utils.data
@@ -32,11 +32,11 @@ def parse_args(args=None, namespace=None):
         "-o", "--out_dir", type=pathlib.Path, help="output directory"
     )
     parser.add_argument(
-        "-ns",
-        "--n_samples",
-        default=10,
+        "-b",
+        "--batch_size",
+        default=8,
         type=int,
-        help="number of samples to generate",
+        help="batch size",
     )
     parser.add_argument(
         "-c",
@@ -46,13 +46,7 @@ def parse_args(args=None, namespace=None):
     )
     parser.add_argument(
         "-s",
-        "--shuffle",
-        action="store_true",
-        help="whether to shuffle the test data",
-    )
-    parser.add_argument(
-        "-m",
-        "--model_steps",
+        "--step",
         type=int,
         help="step of the trained model to load (default to the best model)",
     )
@@ -115,72 +109,27 @@ def parse_args(args=None, namespace=None):
     return parser.parse_args(args=args, namespace=namespace)
 
 
-def save_pianoroll(filename, music, size=None, **kwargs):
-    """Save the piano roll to file."""
-    music.show_pianoroll(track_label="program")
-    if size is not None:
-        plt.gcf().set_size_inches(size)
-    plt.savefig(filename)
-    plt.close()
-
-
-def save_result(filename, data, sample_dir, encoding):
-    """Save the results in multiple formats."""
+def evaluate(data, encoding, filename, eval_dir):
+    """Evaluate the results."""
     # Save as a numpy array
-    np.save(sample_dir / "npy" / f"{filename}.npy", data)
+    np.save(eval_dir / "npy" / f"{filename}.npy", data)
 
     # Save as a CSV file
-    representation.save_csv_codes(sample_dir / "csv" / f"{filename}.csv", data)
+    representation.save_csv_codes(eval_dir / "csv" / f"{filename}.csv", data)
 
     # Convert to a MusPy Music object
     music = representation.decode(data, encoding)
 
     # Save as a MusPy JSON file
-    music.save(sample_dir / "json" / f"{filename}.json")
+    music.save(eval_dir / "json" / f"{filename}.json")
 
-    # Save as a piano roll
-    save_pianoroll(
-        sample_dir / "png" / f"{filename}.png", music, (20, 5), preset="frame"
-    )
-
-    # Save as a MIDI file
-    music.write(sample_dir / "mid" / f"{filename}.mid")
-
-    # Save as a WAV file
-    music.write(
-        sample_dir / "wav" / f"{filename}.wav",
-        options="-o synth.polyphony=4096",
-    )
-
-    # Save also as a MP3 file
-    subprocess.check_output(
-        ["ffmpeg", "-loglevel", "error", "-y", "-i"]
-        + [str(sample_dir / "wav" / f"{filename}.wav")]
-        + ["-b:a", "192k"]
-        + [str(sample_dir / "mp3" / f"{filename}.mp3")]
-    )
-
-    # Trim the music
-    music.trim(music.resolution * 64)
-
-    # Save the trimmed version as a piano roll
-    save_pianoroll(
-        sample_dir / "png-trimmed" / f"{filename}.png", music, (10, 5)
-    )
-
-    # Save the trimmed version as a WAV file
-    music.write(
-        sample_dir / "wav-trimmed" / f"{filename}.wav",
-        options="-o synth.polyphony=4096",
-    )
-
-    # Save also as a MP3 file
-    subprocess.check_output(
-        ["ffmpeg", "-loglevel", "error", "-y", "-i"]
-        + [str(sample_dir / "wav-trimmed" / f"{filename}.wav")]
-        + ["-b:a", "192k"]
-        + [str(sample_dir / "mp3-trimmed" / f"{filename}.mp3")]
-    )
+    return {
+        "pitch_class_entropy": muspy.pitch_class_entropy(music),
+        "scale_consistency": muspy.scale_consistency(music),
+        "groove_consistency": muspy.groove_consistency(
+            music, 4 * music.resolution
+        ),
+    }
 
 
 def main():
@@ -227,20 +176,20 @@ def main():
     # Log arguments
     logging.info(f"Using arguments:\n{pprint.pformat(vars(args))}")
 
-    # Make sure the sample directory exists
-    sample_dir = args.out_dir / "samples"
-    sample_dir.mkdir(exist_ok=True)
-    (sample_dir / "npy").mkdir(exist_ok=True)
-    (sample_dir / "csv").mkdir(exist_ok=True)
-    (sample_dir / "json").mkdir(exist_ok=True)
-    (sample_dir / "png").mkdir(exist_ok=True)
-    (sample_dir / "png-trimmed").mkdir(exist_ok=True)
-    (sample_dir / "mid").mkdir(exist_ok=True)
-    (sample_dir / "wav").mkdir(exist_ok=True)
-    (sample_dir / "wav-trimmed").mkdir(exist_ok=True)
-    (sample_dir / "mp3").mkdir(exist_ok=True)
-    (sample_dir / "mp3-trimmed").mkdir(exist_ok=True)
-    (sample_dir / "attn").mkdir(exist_ok=True)
+    # Make sure the output directory exists
+    eval_dir = args.out_dir / "eval"
+    eval_dir.mkdir(exist_ok=True)
+    for key in (
+        "truth",
+        "unconditioned",
+        "instrument-informed",
+        "4-beat-continuation",
+        "16-beat-continuation",
+    ):
+        (eval_dir / key).mkdir(exist_ok=True)
+        (eval_dir / key / "npy").mkdir(exist_ok=True)
+        (eval_dir / key / "csv").mkdir(exist_ok=True)
+        (eval_dir / key / "json").mkdir(exist_ok=True)
 
     # Get the specified device
     device = torch.device(
@@ -265,7 +214,6 @@ def main():
     )
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
-        shuffle=args.shuffle,
         num_workers=args.jobs,
         collate_fn=dataset.SODDataset.collate,
     )
@@ -288,10 +236,10 @@ def main():
 
     # Load the checkpoint
     checkpoint_dir = args.out_dir / "checkpoints"
-    if args.model_steps is None:
+    if args.step is None:
         checkpoint_filename = checkpoint_dir / "best_model.pt"
     else:
-        checkpoint_filename = checkpoint_dir / f"model_{args.model_steps}.pt"
+        checkpoint_filename = checkpoint_dir / f"model_{args.step}.pt"
     model.load_state_dict(torch.load(checkpoint_filename, map_location=device))
     logging.info(f"Loaded the model weights from: {checkpoint_filename}")
     model.eval()
@@ -303,24 +251,34 @@ def main():
     beat_4 = encoding["beat_code_map"][4]
     beat_16 = encoding["beat_code_map"][16]
 
+    results = defaultdict(list)
+
     # Iterate over the dataset
     with torch.no_grad():
-        data_iter = iter(test_loader)
-        for i in tqdm.tqdm(range(args.n_samples), ncols=80):
-            batch = next(data_iter)
-
+        for idx, batch in enumerate(tqdm.tqdm(test_loader, ncols=80)):
             # ------------
             # Ground truth
             # ------------
-            truth_np = batch["seq"][0].numpy()
-            save_result(f"{i}_truth", truth_np, sample_dir, encoding)
+
+            truth_np = batch["seq"].numpy()
+            result = evaluate(
+                truth_np[0], encoding, f"{idx}_0", eval_dir / "truth"
+            )
+            results["truth"].append(result)
+            # for i, sliced in enumerate(truth_np):
+            #     result = evaluate(
+            #         sliced, encoding, f"{idx}_{i}", eval_dir / "truth"
+            #     )
+            #     results["truth"].append(result)
 
             # ------------------------
             # Unconditioned generation
             # ------------------------
 
             # Get output start tokens
-            tgt_start = torch.zeros((1, 1, 6), dtype=torch.long, device=device)
+            tgt_start = torch.zeros(
+                (args.batch_size, 1, 6), dtype=torch.long, device=device
+            )
             tgt_start[:, 0, 0] = sos
 
             # Generate new samples
@@ -335,10 +293,19 @@ def main():
             )
             generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
 
-            # Save the results
-            save_result(
-                f"{i}_unconditioned", generated_np[0], sample_dir, encoding
+            # Evaluate the results
+            result = evaluate(
+                generated_np[0],
+                encoding,
+                f"{idx}_0",
+                eval_dir / "unconditioned",
             )
+            results["unconditioned"].append(result)
+            # for i, sliced in enumerate(generated_np):
+            #     result = evaluate(
+            #         sliced, encoding, f"{idx}_{i}", eval_dir / "unconditioned"
+            #     )
+            #     results["unconditioned"].append(result)
 
             # ------------------------------
             # Instrument-informed generation
@@ -360,13 +327,14 @@ def main():
             )
             generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
 
-            # Save the results
-            save_result(
-                f"{i}_instrument-informed",
+            # Evaluate the results
+            result = evaluate(
                 generated_np[0],
-                sample_dir,
                 encoding,
+                f"{idx}_0",
+                eval_dir / "instrument-informed",
             )
+            results["instrument-informed"].append(result)
 
             # -------------------
             # 4-beat continuation
@@ -388,13 +356,14 @@ def main():
             )
             generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
 
-            # Save the results
-            save_result(
-                f"{i}_4-beat-continuation",
+            # Evaluate the results
+            result = evaluate(
                 generated_np[0],
-                sample_dir,
                 encoding,
+                f"{idx}_0",
+                eval_dir / "4-beat-continuation",
             )
+            results["4-beat-continuation"].append(result)
 
             # --------------------
             # 16-beat continuation
@@ -416,12 +385,21 @@ def main():
             )
             generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
 
-            # Save results
-            save_result(
-                f"{i}_16-beat-continuation",
+            # Evaluate the results
+            result = evaluate(
                 generated_np[0],
-                sample_dir,
                 encoding,
+                f"{idx}_0",
+                eval_dir / "16-beat-continuation",
+            )
+            results["16-beat-continuation"].append(result)
+
+    for exp, result in results.items():
+        logging.info(exp)
+        for key in result[0]:
+            logging.info(
+                f"{key}: mean={np.nanmean([r[key] for r in result]):.4f}, "
+                f"steddev={np.nanstd([r[key]for r in result]):.4f}"
             )
 
 

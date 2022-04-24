@@ -432,18 +432,22 @@ def encode_notes(notes, encoding):
     # Start the codes with an SOS row
     codes = [(type_code_map["start-of-song"], 0, 0, 0, 0, 0)]
 
-    # Extract programs
-    programs = sorted(set(note[-1] for note in notes))
+    # Extract instruments
+    instruments = set(program_instrument_map[note[-1]] for note in notes)
 
     # Encode the instruments
-    for program in programs:
-        instrument = program_instrument_map[program]
+    instrument_codes = []
+    for instrument in instruments:
         # Skip unknown instruments
         if instrument is None:
             continue
         row = [type_code_map["instrument"], 0, 0, 0, 0, 0]
         row[instrument_dim] = instrument_code_map[instrument]
-        codes.append(row)
+        instrument_codes.append(row)
+
+    # Sort the instruments and append them to the code sequence
+    instrument_codes.sort()
+    codes.extend(instrument_codes)
 
     # Encode the notes
     codes.append((type_code_map["start-of-notes"], 0, 0, 0, 0, 0))
