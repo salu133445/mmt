@@ -14,7 +14,11 @@ def parse_args(args=None, namespace=None):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-d", "--dataset", choices=("sod", "lmd"), help="dataset key"
+        "-d",
+        "--dataset",
+        choices=("sod", "lmd"),
+        required=True,
+        help="dataset key",
     )
     parser.add_argument("-n", "--names", type=pathlib.Path, help="input names")
     parser.add_argument(
@@ -49,8 +53,10 @@ def main():
     # Set default arguments
     if args.dataset is not None:
         if args.names is None:
-            args.names = pathlib.Path(f"data/{args.dataset}/processed/names.txt")
-        if args.out_dir is None
+            args.names = pathlib.Path(
+                f"data/{args.dataset}/processed/names.txt"
+            )
+        if args.out_dir is None:
             args.out_dir = pathlib.Path(f"data/{args.dataset}/processed/")
 
     # Set up the logger

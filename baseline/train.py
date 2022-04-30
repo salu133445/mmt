@@ -9,10 +9,11 @@ import numpy as np
 import torch
 import torch.utils.data
 import tqdm
+import x_transformers
 
 import dataset
-import music_x_transformers
-import representation
+import representation_mmm
+import representation_remi
 import utils
 
 
@@ -26,6 +27,13 @@ def parse_args(args=None, namespace=None):
         choices=("sod", "lmd"),
         required=True,
         help="dataset key",
+    )
+    parser.add_argument(
+        "-r",
+        "--representation",
+        choices=("mmm", "remi"),
+        required=True,
+        help="representation key",
     )
     parser.add_argument(
         "-t", "--train_names", type=pathlib.Path, help="training names"
@@ -53,12 +61,6 @@ def parse_args(args=None, namespace=None):
         type=int,
         help="batch size",
     )
-    parser.add_argument(
-        "-na",
-        "--disable_augmentation",
-        action="store_true",
-        help="whether to disable augmentation",
-    )
     # Model
     parser.add_argument(
         "-m",
@@ -70,33 +72,9 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-mb",
         "--max_beat",
-        default=256,
+        default=64,
         type=int,
         help="maximum number of beats",
-    )
-    parser.add_argument(
-        "-dim", "--dim", default=512, type=int, help="model dimension"
-    )
-    parser.add_argument(
-        "-l", "--layers", default=8, type=int, help="number of layers"
-    )
-    parser.add_argument(
-        "-ah", "--heads", default=4, type=int, help="number of attention heads"
-    )
-    parser.add_argument(
-        "-do", "--dropout", default=0.1, type=float, help="dropout rate"
-    )
-    parser.add_argument(
-        "-np",
-        "--disable_absolute_positional_embedding",
-        action="store_true",
-        help="whether to disable absolute positional embedding",
-    )
-    parser.add_argument(
-        "-nr",
-        "--disable_relative_positional_embedding",
-        action="store_true",
-        help="whether to disable relative positional embedding",
     )
     # Training
     parser.add_argument(
@@ -154,7 +132,36 @@ def parse_args(args=None, namespace=None):
         type=int,
         help="learning rate decay end steps",
     )
-    # Others
+    parser.add_argument(
+        "-dim", "--dim", default=512, type=int, help="model dimension"
+    )
+    parser.add_argument(
+        "-l", "--layers", default=8, type=int, help="number of layers"
+    )
+    parser.add_argument(
+        "-ah", "--heads", default=4, type=int, help="number of attention heads"
+    )
+    parser.add_argument(
+        "-do", "--dropout", default=0.1, type=float, help="dropout rate"
+    )
+    parser.add_argument(
+        "-na",
+        "--disable_augmentation",
+        action="store_true",
+        help="whether to disable augmentation",
+    )
+    parser.add_argument(
+        "-np",
+        "--disable_absolute_positional_embedding",
+        action="store_true",
+        help="whether to disable absolute positional embedding",
+    )
+    parser.add_argument(
+        "-nr",
+        "--disable_relative_positional_embedding",
+        action="store_true",
+        help="whether to disable relative positional embedding",
+    )
     parser.add_argument("-g", "--gpu", type=int, help="gpu number")
     parser.add_argument(
         "-j",
@@ -204,9 +211,13 @@ def main():
         if args.in_dir is None:
             args.in_dir = pathlib.Path(f"data/{args.dataset}/processed/notes/")
         if args.out_dir is None:
-            args.out_dir = pathlib.Path(f"exp/test_{args.dataset}")
+            args.out_dir = pathlib.Path(f"exp/test_baseline_{args.dataset}")
     if args.jobs is None:
         args.jobs = min(args.batch_size, 8)
+    if args.representation == "mmm":
+        representation = representation_mmm
+    elif args.representation == "remi":
+        representation = representation_remi
 
     # Make sure the output directory exists
     args.out_dir.mkdir(exist_ok=True)
@@ -238,18 +249,23 @@ def main():
     logging.info(f"Using device: {device}")
 
     # Load the encoding
-    encoding = representation.load_encoding(args.in_dir / "encoding.json")
+    encoding = representation.get_encoding()
+
+    # Load the indexer
+    indexer = representation.Indexer(encoding["event_code_map"])
 
     # Create the dataset and data loader
     logging.info(f"Creating the data loader...")
     train_dataset = dataset.MusicDataset(
         args.train_names,
         args.in_dir,
-        encoding,
+        encoding=encoding,
+        indexer=indexer,
+        encode_fn=representation.encode_notes,
         max_seq_len=args.max_seq_len,
         max_beat=args.max_beat,
-        use_augmentation=not args.disable_augmentation,
         use_csv=args.use_csv,
+        use_augmentation=not args.disable_augmentation,
     )
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -261,7 +277,9 @@ def main():
     valid_dataset = dataset.MusicDataset(
         args.valid_names,
         args.in_dir,
-        encoding,
+        encoding=encoding,
+        indexer=indexer,
+        encode_fn=representation.encode_notes,
         max_seq_len=args.max_seq_len,
         max_beat=args.max_beat,
         use_csv=args.use_csv,
@@ -275,20 +293,22 @@ def main():
 
     # Create the model
     logging.info(f"Creating model...")
-    model = music_x_transformers.MusicXTransformer(
-        dim=args.dim,
-        encoding=encoding,
-        depth=args.layers,
-        heads=args.heads,
+    model = x_transformers.TransformerWrapper(
+        num_tokens=len(indexer),
         max_seq_len=args.max_seq_len,
-        max_beat=args.max_beat,
-        rel_pos_bias=not args.disable_relative_positional_embedding,
-        rotary_pos_emb=not args.disable_relative_positional_embedding,
+        attn_layers=x_transformers.Decoder(
+            dim=args.dim,
+            depth=args.layers,
+            heads=args.heads,
+            rel_pos_bias=not args.disable_relative_positional_embedding,
+            rotary_pos_emb=not args.disable_relative_positional_embedding,
+            emb_dropout=args.dropout,
+            attn_dropout=args.dropout,
+            ff_dropout=args.dropout,
+        ),
         use_abs_pos_emb=not args.disable_absolute_positional_embedding,
-        emb_dropout=args.dropout,
-        attn_dropout=args.dropout,
-        ff_dropout=args.dropout,
     ).to(device)
+    model = x_transformers.AutoregressiveWrapper(model)
 
     # Summarize the model
     n_parameters = sum(p.numel() for p in model.parameters())
@@ -369,7 +389,6 @@ def main():
         model.eval()
         with torch.no_grad():
             total_loss = 0
-            total_losses = [0] * 6
             count = 0
             for batch in valid_loader:
                 # Get input and output pair
@@ -377,35 +396,19 @@ def main():
                 mask = batch["mask"].to(device)
 
                 # Pass through the model
-                loss, losses = model(seq, return_list=True, mask=mask)
+                loss = model(seq, mask=mask)
 
                 # Accumulate validation loss
                 count += len(batch)
                 total_loss += len(batch) * float(loss)
-                for idx in range(6):
-                    total_losses[idx] += float(losses[idx])
         val_loss = total_loss / count
-        individual_losses = [l / count for l in total_losses]
         logging.info(f"Validation loss: {val_loss:.4f}")
-        logging.info(
-            f"Individual losses: type={individual_losses[0]:.4f}, "
-            f"beat: {individual_losses[1]:.4f}, "
-            f"position: {individual_losses[2]:.4f}, "
-            f"pitch: {individual_losses[3]:.4f}, "
-            f"duration: {individual_losses[4]:.4f}, "
-            f"instrument: {individual_losses[5]:.4f}"
-        )
 
         # Release GPU memory right away
         del seq, mask
 
         # Write losses to file
-        loss_csv.write(
-            f"{step},{train_loss},{val_loss},{individual_losses[0]},"
-            f"{individual_losses[1]},{individual_losses[2]},"
-            f"{individual_losses[3]},{individual_losses[4]},"
-            f"{individual_losses[5]}\n"
-        )
+        loss_csv.write(f"{step},{train_loss},{val_loss}\n")
 
         # Save the model
         checkpoint_filename = args.out_dir / "checkpoints" / f"model_{step}.pt"

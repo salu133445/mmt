@@ -2,11 +2,9 @@
 import pathlib
 import pprint
 from collections import defaultdict
-from email.policy import default
 
 import muspy
 import numpy as np
-import pretty_midi
 
 import utils
 
@@ -243,24 +241,40 @@ INSTRUMENT_PROGRAM_MAP = {
     "melodic-tom": 117,
     "synth-drums": 118,
 }
+KNOWN_PROGRAMS = list(
+    k for k, v in INSTRUMENT_PROGRAM_MAP.items() if v is not None
+)
 KNOWN_INSTRUMENTS = list(dict.fromkeys(INSTRUMENT_PROGRAM_MAP.keys()))
+
+KNOWN_EVENTS = [
+    "start-of-song",
+    "end-of-song",
+    "start-of-track",
+    "end-of-track",
+]
+KNOWN_EVENTS.extend(
+    f"instrument_{instrument}" for instrument in KNOWN_INSTRUMENTS
+)
+KNOWN_EVENTS.extend(f"note-on_{i}" for i in range(128))
+KNOWN_EVENTS.extend(f"note-off_{i}" for i in range(128))
+KNOWN_EVENTS.extend(f"time-shift_{i}" for i in range(1, MAX_TIME_SHIFT + 1))
+EVENT_CODE_MAPS = {event: i for i, event in enumerate(KNOWN_EVENTS)}
+CODE_EVENT_MAPS = utils.inverse_dict(EVENT_CODE_MAPS)
 
 
 class Indexer:
-    def __init__(self, data=None, is_learning=False):
+    def __init__(self, data=None, is_training=False):
         self._dict = dict() if data is None else data
-        self._n_words = 0 if data is None else len(data)
-        self._is_learning = is_learning
+        self._is_training = is_training
 
     def __getitem__(self, key):
-        if self._is_learning and key not in self._dict:
-            self._dict[key] = self._n_words
-            self._n_words += 1
-            return self._n_words - 1
+        if self._is_training and key not in self._dict:
+            self._dict[key] = len(self._dict)
+            return len(self._dict) - 1
         return self._dict[key]
 
     def __len__(self):
-        return self._n_words
+        return len(self._dict)
 
     def __contain__(self, item):
         return item in self._dict
@@ -269,9 +283,13 @@ class Indexer:
         """Return the internal dictionary."""
         return self._dict
 
-    def learn(self, is_learning):
-        """Set learning mode."""
-        self._is_learning = is_learning
+    def train(self):
+        """Set training mode."""
+        self._is_training = True
+
+    def eval(self):
+        """Set evaluation mode."""
+        self._is_learning = False
 
 
 def get_encoding():
@@ -282,20 +300,51 @@ def get_encoding():
         "max_time_shift": MAX_TIME_SHIFT,
         "program_instrument_map": PROGRAM_INSTRUMENT_MAP,
         "instrument_program_map": INSTRUMENT_PROGRAM_MAP,
+        "event_code_map": EVENT_CODE_MAPS,
+        "code_event_map": CODE_EVENT_MAPS,
     }
 
 
 def load_encoding(filename):
     """Load encoding configurations from a JSON file."""
     encoding = utils.load_json(filename)
-    encoding["program_instrument_map"] = {
-        int(k) if k != "null" else None: v
-        for k, v in encoding["program_instrument_map"].items()
-    }
+    for key in ("program_instrument_map", "code_event_map"):
+        encoding[key] = {
+            int(k) if k != "null" else None: v
+            for k, v in encoding[key].items()
+        }
     return encoding
 
 
-def encode(music, encoding, indexer):
+def extract_notes(music, resolution):
+    """Return a MusPy music object as a note sequence.
+
+    Each row of the output is a note specified as follows.
+
+        (beat, position, pitch, duration, program)
+
+    """
+    # Check resolution
+    assert music.resolution == resolution
+
+    # Extract notes
+    notes = []
+    for track in music:
+        if track.program not in KNOWN_PROGRAMS:
+            continue
+        for note in track:
+            beat, position = divmod(note.time, resolution)
+            notes.append(
+                (beat, position, note.pitch, note.duration, track.program)
+            )
+
+    # Deduplicate and sort the notes
+    notes = sorted(set(notes))
+
+    return np.array(notes)
+
+
+def encode_notes(notes, encoding, indexer):
     """Encode the notes into a sequence of code tuples.
 
     Each row of the output is encoded as follows.
@@ -310,28 +359,40 @@ def encode(music, encoding, indexer):
 
     # Get maps
     program_instrument_map = encoding["program_instrument_map"]
-
-    # Check resolution
-    assert music.resolution == resolution
+    instrument_program_map = encoding["instrument_program_map"]
 
     # Extract notes
-    events = defaultdict(list)
-    for track in music:
-        instrument = program_instrument_map[track.program]
+    instruments = defaultdict(list)
+    for note in notes:
+        instrument = program_instrument_map[note[-1]]
         # Skip unknown instruments
         if instrument is None:
             continue
-        for note in track:
-            if note.time // resolution > max_beat:
-                continue
-            events[instrument].append((note.time, f"note-on_{note.pitch}"))
-            events[instrument].append((note.end, f"note-off_{note.pitch}"))
+        instruments[instrument].append(note)
 
-    # Deduplicate and sort the notes
+    # Sort the instruments
+    instruments = dict(
+        sorted(
+            instruments.items(),
+            key=lambda x: instrument_program_map[x[0]],
+        )
+    )
+
+    # Collect events
+    events = defaultdict(list)
+    for instrument, instrument_notes in instruments.items():
+        for beat, position, pitch, duration, _ in instrument_notes:
+            if beat > max_beat:
+                continue
+            time = beat * resolution + position
+            events[instrument].append((time, f"note-on_{pitch}"))
+            events[instrument].append((time + duration, f"note-off_{pitch}"))
+
+    # Deduplicate and sort the events
     for instrument in events:
         events[instrument] = sorted(set(events[instrument]))
 
-    # Start the codes with an SOS row
+    # Start the codes with an SOS event
     codes = [indexer["start-of-song"]]
 
     # Encode the instruments
@@ -340,35 +401,49 @@ def encode(music, encoding, indexer):
         codes.append(indexer[f"instrument_{instrument}"])
         time = 0
         for event_time, event in events[instrument]:
-            while event_time < time:
+            while time < event_time:
                 time_shift = min(event_time - time, max_time_shift)
                 codes.append(indexer[f"time-shift_{time_shift}"])
                 time += time_shift
             codes.append(indexer[event])
         codes.append(indexer["end-of-track"])
 
-    # End the codes with an EOS row
+    # End the codes with an EOS event
     codes.append(indexer["end-of-song"])
 
     return np.array(codes)
 
 
-def decode(data, encoding, vocabulary):
-    """Decode codes to notes.
+def encode(music, encoding, indexer):
+    """Encode a MusPy music object into a sequence of codes.
 
     Each row of the input is encoded as follows.
 
         (event_type, beat, position, pitch, duration, instrument)
 
     """
+    # Extract notes
+    notes = extract_notes(music, encoding["resolution"])
+
+    # Encode the notes
+    codes = encode_notes(notes, encoding, indexer)
+
+    return codes
+
+
+def decode_notes(data, encoding, vocabulary):
+    """Decode codes into a note sequence."""
     # Get variables and maps
     resolution = encoding["resolution"]
     instrument_program_map = encoding["instrument_program_map"]
 
-    # Decode the codes into a sequence of notes
-    tracks = []
+    # Initialize variables
+    program = 0
     time = 0
-    track = None
+    note_ons = {}
+
+    # Decode the codes into a sequence of notes
+    notes = []
     for code in data:
         event = vocabulary[code]
         if event == "start-of-song":
@@ -376,39 +451,68 @@ def decode(data, encoding, vocabulary):
         elif event == "end-of-song":
             break
         elif event in ("start-of-track", "end-of-track"):
-            # Append decoded track to the list
-            tracks.append(track)
             # Reset variables
-            track = muspy.Track()
+            program = 0
             time = 0
             note_ons = {}
         elif event.startswith("instrument"):
-            if track is None:
-                continue
             instrument = event.split("_")[1]
-            track.program = instrument_program_map[instrument]
+            program = instrument_program_map[instrument]
         elif event.startswith("time-shift"):
-            time += event.split("_")[1]
+            time += int(event.split("_")[1])
         elif event.startswith("note-on"):
-            if track is None:
-                continue
             pitch = int(event.split("_")[1])
             note_ons[pitch] = time
         elif event.startswith("note-off"):
-            if track is None:
-                continue
             pitch = int(event.split("_")[1])
             # Skip a note-off event without a corresponding note-on event
             if pitch not in note_ons:
                 continue
-            track.notes.append(
-                muspy.Note(note_ons[pitch], pitch, time - note_ons[pitch])
+            beat, position = divmod(note_ons[pitch], resolution)
+            notes.append(
+                (beat, position, pitch, time - note_ons[pitch], program)
             )
         else:
-            raise ValueError("Unknown event type.")
+            raise ValueError(f"Unknown event type for: {event}")
 
+    return notes
+
+
+def reconstruct(notes, resolution):
+    """Reconstruct a note sequence to a MusPy Music object."""
     # Construct the MusPy Music object
-    music = muspy.Music(resolution=resolution, tracks=tracks)
+    music = muspy.Music(resolution=resolution, tempos=[muspy.Tempo(0, 100)])
+
+    # Append the tracks
+    programs = sorted(set(note[-1] for note in notes))
+    for program in programs:
+        music.tracks.append(muspy.Track(program))
+
+    # Append the notes
+    for beat, position, pitch, duration, program in notes:
+        time = beat * resolution + position
+        track_idx = programs.index(program)
+        music[track_idx].notes.append(muspy.Note(time, pitch, duration))
+
+    return music
+
+
+def decode(codes, encoding, vocabulary):
+    """Decode codes into a MusPy Music object.
+
+    Each row of the input is encoded as follows.
+
+        (event_type, beat, position, pitch, duration, instrument)
+
+    """
+    # Get resolution
+    resolution = encoding["resolution"]
+
+    # Decode codes into a note sequence
+    notes = decode_notes(codes, encoding, vocabulary)
+
+    # Reconstruct the music object
+    music = reconstruct(notes, resolution)
 
     return music
 
@@ -431,15 +535,40 @@ def dump(data, vocabulary):
             lines.append(event)
             break
         else:
-            raise ValueError("Unknown event type.")
+            raise ValueError(f"Unknown event type for: {event}")
 
     return "\n".join(lines)
 
 
-def save_csv(filename, data):
+def save_txt(filename, data, vocabulary):
+    """Dump the codes into a TXT file."""
+    with open(filename, "w") as f:
+        f.write(dump(data, vocabulary))
+
+
+def save_csv_notes(filename, data):
     """Save the representation as a CSV file."""
-    utils.save_csv(
-        filename, data, header="type,beat,position,pitch,duration,instrument"
+    assert data.shape[1] == 5
+    np.savetxt(
+        filename,
+        data,
+        fmt="%d",
+        delimiter=",",
+        header="beat,position,pitch,duration,program",
+        comments="",
+    )
+
+
+def save_csv_codes(filename, data):
+    """Save the representation as a CSV file."""
+    assert data.ndim == 1
+    np.savetxt(
+        filename,
+        data,
+        fmt="%d",
+        delimiter=",",
+        header="code",
+        comments="",
     )
 
 
@@ -449,7 +578,7 @@ def main():
     encoding = get_encoding()
 
     # Save the encoding
-    filename = pathlib.Path(__file__).parent / "encoding.json"
+    filename = pathlib.Path(__file__).parent / "encoding_mmm.json"
     utils.save_json(filename, encoding)
 
     # Load encoding
@@ -463,26 +592,24 @@ def main():
             print(f"{key}:")
             pprint.pprint(value, indent=2)
 
+    # Print the variables
+    print(f"{' Variables ':=^40}")
+    print(f"resolution: {encoding['resolution']}")
+    print(f"max_beat: {encoding['max_beat']}")
+    print(f"max_time_shift: {encoding['max_time_shift']}")
+
     # Load the example
     music = muspy.load(pathlib.Path(__file__).parent / "example.json")
 
     # Get the indexer
-    indexer = Indexer(is_learning=True)
+    indexer = Indexer(is_training=True)
 
     # Encode the music
     encoded = encode(music, encoding, indexer)
     print(f"Codes:\n{encoded}")
 
-    # Save the learned indexer
-    filename = pathlib.Path(__file__).parent / "indexer.json"
-    utils.save_json(filename, indexer.get_dict())
-
-    # Load the indexer
-    loaded = utils.load_json(filename)
-    loaded_indexer = Indexer(loaded)
-
     # Get the learned vocabulary
-    vocabulary = utils.inverse_dict(loaded_indexer.get_dict())
+    vocabulary = utils.inverse_dict(indexer.get_dict())
 
     print("-" * 40)
     print(f"Decoded:\n{dump(encoded, vocabulary)}")

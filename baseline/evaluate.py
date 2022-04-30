@@ -10,10 +10,11 @@ import numpy as np
 import torch
 import torch.utils.data
 import tqdm
+import x_transformers
 
 import dataset
-import music_x_transformers
-import representation
+import representation_mmm
+import representation_remi
 import utils
 
 
@@ -69,13 +70,6 @@ def parse_args(args=None, namespace=None):
         help="sampling temperature (default: 1.0)",
     )
     parser.add_argument(
-        "-ts",
-        "--temperatures",
-        nargs="+",
-        type=float,
-        help="sampling temperatures",
-    )
-    parser.add_argument(
         "-f",
         "--filter",
         default="top_k",
@@ -83,25 +77,11 @@ def parse_args(args=None, namespace=None):
         help="sampling filter (default: 'top_k')",
     )
     parser.add_argument(
-        "-fs",
-        "--filters",
-        nargs="+",
-        type=str,
-        help="sampling filters",
-    )
-    parser.add_argument(
         "-ft",
         "--filter_threshold",
         default=0.9,
         type=float,
         help="sampling filter threshold (default: 0.9)",
-    )
-    parser.add_argument(
-        "-fts",
-        "--filter_thresholds",
-        nargs="+",
-        type=float,
-        help="sampling filter thresholds",
     )
     parser.add_argument("-g", "--gpu", type=int, help="gpu number")
     parser.add_argument(
@@ -113,7 +93,7 @@ def parse_args(args=None, namespace=None):
     return parser.parse_args(args=args, namespace=namespace)
 
 
-def evaluate(data, encoding, filename, eval_dir):
+def evaluate(data, encoding, vocabulary, representation, filename, eval_dir):
     """Evaluate the results."""
     # Save as a numpy array
     np.save(eval_dir / "npy" / f"{filename}.npy", data)
@@ -122,7 +102,7 @@ def evaluate(data, encoding, filename, eval_dir):
     representation.save_csv_codes(eval_dir / "csv" / f"{filename}.csv", data)
 
     # Convert to a MusPy Music object
-    music = representation.decode(data, encoding)
+    music = representation.decode(data, encoding, vocabulary)
 
     # Save as a MusPy JSON file
     music.save(eval_dir / "json" / f"{filename}.json")
@@ -151,15 +131,6 @@ def main():
             args.in_dir = pathlib.Path(f"data/{args.dataset}/processed/notes/")
         if args.out_dir is None:
             args.out_dir = pathlib.Path(f"exp/test_{args.dataset}")
-    temperature = args.temperatures or args.temperature
-    logits_filter = args.filters or args.filter
-    filter_thres = args.filter_thresholds or args.filter_threshold
-    if args.temperatures:
-        args.temperature = None
-    if args.filters:
-        args.filter = None
-    if args.filter_thresholds:
-        args.filter_threshold = None
 
     # Save command-line arguments
     utils.save_args(args.out_dir / "evaluate-args.json", args)
@@ -204,15 +175,32 @@ def main():
     # Load training configurations
     train_args = utils.load_json(args.out_dir / "train-args.json")
 
+    # Get representation
+    if train_args["representation"] == "mmm":
+        representation = representation_mmm
+    elif train_args["representation"] == "remi":
+        representation = representation_remi
+    else:
+        raise ValueError(
+            f"Unknown representation: {train_args['representation']}"
+        )
+
     # Load the encoding
-    encoding = representation.load_encoding(args.in_dir / "encoding.json")
+    encoding = representation.get_encoding()
+
+    # Load the indexer
+    indexer = representation.Indexer(encoding["event_code_map"])
+
+    # Get the vocabulary
+    vocabulary = encoding["code_event_map"]
 
     # Create the dataset and data loader
     logging.info(f"Creating the data loader...")
     test_dataset = dataset.MusicDataset(
         args.names,
         args.in_dir,
-        encoding,
+        encoding=encoding,
+        indexer=indexer,
         max_seq_len=train_args["max_seq_len"],
         use_csv=args.use_csv,
     )
@@ -224,25 +212,28 @@ def main():
 
     # Create the model
     logging.info(f"Creating the model...")
-    disable_absolute_positional_embedding = train_args.get(
-        "disable_absolute_positional_embedding"
-    )
-    if disable_absolute_positional_embedding is None:
-        disable_absolute_positional_embedding = False
-    model = music_x_transformers.MusicXTransformer(
-        dim=train_args["dim"],
-        encoding=encoding,
-        depth=train_args["layers"],
-        heads=train_args["heads"],
+    model = x_transformers.TransformerWrapper(
+        num_tokens=len(indexer),
         max_seq_len=train_args["max_seq_len"],
-        max_beat=train_args["max_beat"],
-        rel_pos_bias=not train_args["disable_relative_positional_embedding"],
-        rotary_pos_emb=not train_args["disable_relative_positional_embedding"],
-        use_abs_pos_emb=not disable_absolute_positional_embedding,
-        emb_dropout=train_args["dropout"],
-        attn_dropout=train_args["dropout"],
-        ff_dropout=train_args["dropout"],
+        attn_layers=x_transformers.Decoder(
+            dim=train_args["dim"],
+            depth=train_args["layers"],
+            heads=train_args["heads"],
+            rel_pos_bias=not train_args[
+                "disable_relative_positional_embedding"
+            ],
+            rotary_pos_emb=not train_args[
+                "disable_relative_positional_embedding"
+            ],
+            emb_dropout=train_args["dropout"],
+            attn_dropout=train_args["dropout"],
+            ff_dropout=train_args["dropout"],
+        ),
+        use_abs_pos_emb=not train_args[
+            "disable_absolute_positional_embedding"
+        ],
     ).to(device)
+    model = x_transformers.AutoregressiveWrapper(model)
 
     # Load the checkpoint
     checkpoint_dir = args.out_dir / "checkpoints"
@@ -255,11 +246,18 @@ def main():
     model.eval()
 
     # Get special tokens
-    sos = encoding["type_code_map"]["start-of-song"]
-    eos = encoding["type_code_map"]["end-of-song"]
-    beat_0 = encoding["beat_code_map"][0]
-    beat_4 = encoding["beat_code_map"][4]
-    beat_16 = encoding["beat_code_map"][16]
+    sos = indexer["start-of-song"]
+    eos = indexer["end-of-song"]
+
+    # Get the logits filter function
+    if args.filter == "top_k":
+        filter_logits_fn = x_transformers.autoregressive_wrapper.top_k
+    elif args.filter == "top_p":
+        filter_logits_fn = x_transformers.autoregressive_wrapper.top_p
+    elif args.filter == "top_a":
+        filter_logits_fn = x_transformers.autoregressive_wrapper.top_a
+    else:
+        raise ValueError("Unknown logits filter.")
 
     results = defaultdict(list)
 
@@ -272,7 +270,12 @@ def main():
 
             truth_np = batch["seq"].numpy()
             result = evaluate(
-                truth_np[0], encoding, f"{idx}_0", eval_dir / "truth"
+                truth_np[0],
+                encoding,
+                vocabulary,
+                representation,
+                f"{idx}_0",
+                eval_dir / "truth",
             )
             results["truth"].append(result)
 
@@ -282,19 +285,18 @@ def main():
 
             # Get output start tokens
             tgt_start = torch.zeros(
-                (args.batch_size, 1, 6), dtype=torch.long, device=device
+                (args.batch_size, 1), dtype=torch.long, device=device
             )
-            tgt_start[:, 0, 0] = sos
+            tgt_start[:, 0] = sos
 
             # Generate new samples
             generated = model.generate(
                 tgt_start,
                 args.seq_len,
                 eos_token=eos,
-                temperature=temperature,
-                filter_logits_fn=logits_filter,
-                filter_thres=filter_thres,
-                monotonicity_dim=("type", "beat"),
+                temperature=args.temperature,
+                filter_logits_fn=filter_logits_fn,
+                filter_thres=args.filter_threshold,
             )
             generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
 
@@ -302,109 +304,19 @@ def main():
             result = evaluate(
                 generated_np[0],
                 encoding,
+                vocabulary,
+                representation,
                 f"{idx}_0",
                 eval_dir / "unconditioned",
             )
             results["unconditioned"].append(result)
-            # for i, sliced in enumerate(generated_np):
-            #     result = evaluate(
-            #         sliced, encoding, f"{idx}_{i}", eval_dir / "unconditioned"
-            #     )
-            #     results["unconditioned"].append(result)
-
-            # ------------------------------
-            # Instrument-informed generation
-            # ------------------------------
-
-            # Get output start tokens
-            prefix_len = int(np.argmax(batch["seq"][0, :, 1] >= beat_0))
-            tgt_start = batch["seq"][:1, :prefix_len].to(device)
-
-            # Generate new samples
-            generated = model.generate(
-                tgt_start,
-                args.seq_len,
-                eos_token=eos,
-                temperature=temperature,
-                filter_logits_fn=logits_filter,
-                filter_thres=filter_thres,
-                monotonicity_dim=("type", "beat"),
-            )
-            generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
-
-            # Evaluate the results
-            result = evaluate(
-                generated_np[0],
-                encoding,
-                f"{idx}_0",
-                eval_dir / "instrument-informed",
-            )
-            results["instrument-informed"].append(result)
-
-            # -------------------
-            # 4-beat continuation
-            # -------------------
-
-            # Get output start tokens
-            cond_len = int(np.argmax(batch["seq"][0, :, 1] >= beat_4))
-            tgt_start = batch["seq"][:1, :cond_len].to(device)
-
-            # Generate new samples
-            generated = model.generate(
-                tgt_start,
-                args.seq_len,
-                eos_token=eos,
-                temperature=temperature,
-                filter_logits_fn=logits_filter,
-                filter_thres=filter_thres,
-                monotonicity_dim=("type", "beat"),
-            )
-            generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
-
-            # Evaluate the results
-            result = evaluate(
-                generated_np[0],
-                encoding,
-                f"{idx}_0",
-                eval_dir / "4-beat-continuation",
-            )
-            results["4-beat-continuation"].append(result)
-
-            # --------------------
-            # 16-beat continuation
-            # --------------------
-
-            # Get output start tokens
-            cond_len = int(np.argmax(batch["seq"][0, :, 1] >= beat_16))
-            tgt_start = batch["seq"][:1, :cond_len].to(device)
-
-            # Generate new samples
-            generated = model.generate(
-                tgt_start,
-                args.seq_len,
-                eos_token=eos,
-                temperature=temperature,
-                filter_logits_fn=logits_filter,
-                filter_thres=filter_thres,
-                monotonicity_dim=("type", "beat"),
-            )
-            generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
-
-            # Evaluate the results
-            result = evaluate(
-                generated_np[0],
-                encoding,
-                f"{idx}_0",
-                eval_dir / "16-beat-continuation",
-            )
-            results["16-beat-continuation"].append(result)
 
     for exp, result in results.items():
         logging.info(exp)
         for key in result[0]:
             logging.info(
                 f"{key}: mean={np.nanmean([r[key] for r in result]):.4f}, "
-                f"steddev={np.nanstd([r[key]for r in result]):.4f}"
+                f"stddev={np.nanstd([r[key]for r in result]):.4f}"
             )
 
 

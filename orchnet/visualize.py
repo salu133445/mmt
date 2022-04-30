@@ -2,7 +2,6 @@ import argparse
 import logging
 import pathlib
 import pprint
-import subprocess
 import sys
 
 import matplotlib.pyplot as plt
@@ -12,9 +11,13 @@ import torch.utils.data
 import tqdm
 
 import dataset
-import music_x_transformer
+import music_x_transformers
 import representation
 import utils
+
+plt.rc("font", family="serif")
+plt.rc("axes", linewidth=1.5)
+plt.rc("savefig", dpi="150")
 
 
 @utils.resolve_paths
@@ -46,7 +49,13 @@ def parse_args(args=None, namespace=None):
     )
     parser.add_argument(
         "-s",
-        "--step",
+        "--shuffle",
+        action="store_true",
+        help="whether to shuffle the test data",
+    )
+    parser.add_argument(
+        "-m",
+        "--model_steps",
         type=int,
         help="step of the trained model to load (default to the best model)",
     )
@@ -128,14 +137,14 @@ def main():
         args.filter_threshold = None
 
     # Save command-line arguments
-    utils.save_args(args.out_dir / "generate-args.json", args)
+    utils.save_args(args.out_dir / "visualize-args.json", args)
 
     # Set up the logger
     logging.basicConfig(
         level=logging.ERROR if args.quiet else logging.INFO,
         format="%(levelname)-8s %(message)s",
         handlers=[
-            logging.FileHandler(args.out_dir / "generate.log", "w"),
+            logging.FileHandler(args.out_dir / "visualize.log", "w"),
             logging.StreamHandler(sys.stdout),
         ],
     )
@@ -162,9 +171,26 @@ def main():
     # Load the encoding
     encoding = representation.load_encoding(args.in_dir / "encoding.json")
 
+    # Create the dataset and data loader
+    logging.info(f"Creating the data loader...")
+    test_dataset = dataset.MusicDataset(
+        args.names,
+        args.in_dir,
+        encoding,
+        max_seq_len=train_args["max_seq_len"],
+        max_beat=train_args["max_beat"],
+        use_csv=args.use_csv,
+    )
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset,
+        shuffle=args.shuffle,
+        num_workers=args.jobs,
+        collate_fn=dataset.MusicDataset.collate,
+    )
+
     # Create the model
     logging.info(f"Creating the model...")
-    model = music_x_transformer.MusicXTransformer(
+    model = music_x_transformers.MusicXTransformer(
         dim=train_args["dim"],
         encoding=encoding,
         depth=train_args["layers"],
@@ -180,10 +206,10 @@ def main():
 
     # Load the checkpoint
     checkpoint_dir = args.out_dir / "checkpoints"
-    if args.step is None:
+    if args.model_steps is None:
         checkpoint_filename = checkpoint_dir / "best_model.pt"
     else:
-        checkpoint_filename = checkpoint_dir / f"model_{args.step}.pt"
+        checkpoint_filename = checkpoint_dir / f"model_{args.model_steps}.pt"
     model.load_state_dict(torch.load(checkpoint_filename, map_location=device))
     logging.info(f"Loaded the model weights from: {checkpoint_filename}")
     model.eval()
@@ -194,20 +220,97 @@ def main():
 
     # Iterate over the dataset
     with torch.no_grad():
-        for i in tqdm.tqdm(range(args.n_samples), ncols=80):
+        # for idx in tqdm.tqdm(range(args.n_samples), ncols=80):
 
-            # Get output start tokens
-            tgt_start = torch.zeros((1, 1, 6), dtype=torch.long, device=device)
-            tgt_start[:, 0, 0] = sos
+        #     # Get output start tokens
+        #     tgt_start = torch.zeros((1, 1, 6), dtype=torch.long, device=device)
+        #     tgt_start[:, 0, 0] = sos
 
-            # Sequence length
-            n = 50
-            n2 = 50
+        #     # Sequence length
+        #     n = 50
+        #     n2 = 50
+
+        #     # Generate new samples
+        #     generated, attns = model.generate(
+        #         tgt_start,
+        #         max(n, n2),
+        #         eos_token=eos,
+        #         temperature=temperature,
+        #         filter_logits_fn=logits_filter,
+        #         filter_thres=filter_thres,
+        #         monotonicity_dim=("type", "beat"),
+        #         return_attn=True,
+        #     )
+        #     generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
+        #     attn = attns[-1][0].cpu().numpy()
+
+        #     n_heads = len(attn)
+
+        #     for h in range(n_heads):
+        #         plt.figure(figsize=(8, 8))
+        #         plt.imshow(attn[h].T, cmap="Blues", origin="upper")
+        #         codes = [
+        #             f"({c[0]},{c[1]},{c[2]:2},{c[3]:2},{c[4]:2},{c[5]:2})"
+        #             for c in generated_np[0, : n + 1]
+        #         ]
+        #         plt.xticks(
+        #             np.arange(n), codes[1:], family="monospace", rotation=90
+        #         )
+        #         plt.yticks(np.arange(n), codes[:-1], family="monospace")
+        #         plt.gca().xaxis.tick_top()
+        #         plt.tight_layout()
+        #         plt.savefig(sample_dir / f"{idx}_head_{h}.png", pad_inches=0)
+        #         plt.close()
+
+        #     plt.figure(figsize=(8, 8))
+        #     plt.imshow(np.mean(attn, 0).T, cmap="Blues", origin="upper")
+        #     codes = [
+        #         f"({c[0]},{c[1]},{c[2]:2},{c[3]:2},{c[4]:2},{c[5]:2})"
+        #         for c in generated_np[0, : n2 + 1]
+        #     ]
+        #     plt.xticks(
+        #         np.arange(n2), codes[1:], family="monospace", rotation=90
+        #     )
+        #     plt.yticks(np.arange(n2), codes[:-1], family="monospace")
+        #     plt.gca().xaxis.tick_top()
+        #     plt.tight_layout()
+        #     plt.savefig(sample_dir / f"{idx}_mean.png", pad_inches=0)
+        #     plt.close()
+
+        #     plt.figure(figsize=(8, 8))
+        #     plt.imshow(np.max(attn, 0).T, cmap="Blues", origin="upper")
+        #     codes = [
+        #         f"({c[0]},{c[1]},{c[2]:2},{c[3]:2},{c[4]:2},{c[5]:2})"
+        #         for c in generated_np[0, : n2 + 1]
+        #     ]
+        #     plt.xticks(
+        #         np.arange(n2), codes[1:], family="monospace", rotation=90
+        #     )
+        #     plt.yticks(np.arange(n2), codes[:-1], family="monospace")
+        #     plt.gca().xaxis.tick_top()
+        #     plt.tight_layout()
+        #     plt.savefig(sample_dir / f"{idx}_max.png", pad_inches=0)
+        #     plt.close()
+
+        event_attn = [np.zeros((4, n, n)) for n in encoding["n_tokens"]]
+        relative_event_attn = [
+            np.zeros((4, 2 * n)) for n in encoding["n_tokens"]
+        ]
+        test_iter = iter(test_loader)
+        for idx in tqdm.tqdm(range(args.n_samples), ncols=80):
+
+            batch = next(test_iter)
+
+            # # Get output start tokens
+            # tgt_start = torch.zeros((1, 1, 6), dtype=torch.long, device=device)
+            # tgt_start[:, 0, 0] = sos
+
+            tgt_start = batch["seq"][:, :1000].to(device)
 
             # Generate new samples
             generated, attns = model.generate(
                 tgt_start,
-                max(n, n2),
+                1,
                 eos_token=eos,
                 temperature=temperature,
                 filter_logits_fn=logits_filter,
@@ -215,61 +318,280 @@ def main():
                 monotonicity_dim=("type", "beat"),
                 return_attn=True,
             )
+
             generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
+            attn = attns[-1][0].cpu().numpy()
+            n_heads = len(attn)
 
-            m = attns[0].shape[1]
+            seq_len = generated_np.shape[1]
+            n_dim = len(encoding["dimensions"])
 
-            attn_maps = np.zeros((m, n, n))
-            for j in range(n):
-                attn_maps[:, j, : (j + 1)] = attns[j]
+            # Absolute event-event attention
+            for h in range(n_heads):
+                for d in range(n_dim):
+                    for k in range(1, seq_len - 1):
+                        for k_ in range(seq_len - 2):
+                            if d > 0 and (
+                                generated_np[0, k_, d] == 0
+                                or generated_np[0, k, d] == 0
+                            ):
+                                continue
+                            event_attn[d][
+                                h,
+                                generated_np[0, k, d],
+                                generated_np[0, k_, d],
+                            ] += attn[h, k, k_]
 
-            for h in range(m):
-                plt.figure(figsize=(8, 8))
-                plt.imshow(attn_maps[h].T, cmap="Blues", origin="upper")
-                codes = [
-                    f"({c[0]},{c[1]},{c[2]:2},{c[3]:2},{c[4]:2},{c[5]:2})"
-                    for c in generated_np[0, :n]
-                ]
-                plt.xticks(
-                    np.arange(n), codes, family="monospace", rotation=90
+            # Relative event-event attention
+            for h in range(n_heads):
+                for d, n in enumerate(encoding["n_tokens"]):
+                    for k in range(1, seq_len - 1):
+                        for k_ in range(seq_len - 2):
+                            if (
+                                generated_np[0, k_, d] == 0
+                                or generated_np[0, k, d] == 0
+                            ):
+                                continue
+                            relative_event_attn[d][
+                                h,
+                                generated_np[0, k_, d]
+                                - generated_np[0, k, d]
+                                + n,
+                            ] += attn[h, k, k_]
+
+        ticklabels = [
+            [
+                encoding["code_type_map"].get(i)
+                for i in range(encoding["n_tokens"][0])
+            ],
+            [
+                encoding["code_beat_map"].get(i)
+                for i in range(encoding["n_tokens"][1])
+            ],
+            [
+                encoding["code_position_map"].get(i)
+                for i in range(encoding["n_tokens"][2])
+            ],
+            [
+                encoding["code_pitch_map"].get(i)
+                for i in range(encoding["n_tokens"][3])
+            ],
+            [
+                encoding["code_duration_map"].get(i)
+                for i in range(encoding["n_tokens"][4])
+            ],
+            [
+                encoding["code_instrument_map"].get(i)
+                for i in range(encoding["n_tokens"][5])
+            ],
+        ]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            for h in range(n_heads):
+                for d, key in enumerate(encoding["dimensions"]):
+                    if key in ("beat", "position", "pitch", "duration"):
+                        continue
+                    if key == "type":
+                        plt.figure(figsize=(3, 3))
+                    elif key == "instrument":
+                        plt.figure(figsize=(8, 8))
+                    plt.imshow(
+                        np.nan_to_num(
+                            event_attn[d][h]
+                            / event_attn[d][h].sum(-1, keepdims=True)
+                        ).T,
+                        cmap="Blues",
+                        interpolation="none",
+                        origin="upper",
+                    )
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d]),
+                        ticklabels[d],
+                        rotation="vertical"
+                        if key in ("type", "instrument")
+                        else "horizontal",
+                    )
+                    plt.yticks(
+                        np.arange(encoding["n_tokens"][d]), ticklabels[d]
+                    )
+                    plt.gca().xaxis.tick_top()
+                    plt.tick_params(
+                        bottom=False,
+                        top=True,
+                        left=True,
+                        right=False,
+                        labelbottom=False,
+                        labeltop=True,
+                        labelleft=True,
+                        labelright=False,
+                    )
+                    # plt.xlabel("" if key == "type" else key.capitalize())
+                    # plt.ylabel("" if key == "type" else key.capitalize())
+                    # plt.gca().xaxis.set_label_position("top")
+                    if key != "type":
+                        plt.xlim(0.5, encoding["n_tokens"][d] - 0.5)
+                        plt.ylim(encoding["n_tokens"][d] - 0.5, 0.5)
+                    plt.tight_layout()
+                    plt.savefig(
+                        sample_dir / f"{key}_head-{h}.png",
+                        bbox_inches="tight",
+                        pad_inches=0,
+                    )
+                    plt.savefig(
+                        sample_dir / f"{key}_head-{h}.pdf",
+                        bbox_inches="tight",
+                        pad_inches=0,
+                    )
+                    plt.close()
+
+            for d, key in enumerate(encoding["dimensions"]):
+                if key in ("beat", "position", "pitch", "duration"):
+                    continue
+                if key == "type":
+                    plt.figure(figsize=(3, 3))
+                elif key == "instrument":
+                    plt.figure(figsize=(8, 8))
+                plt.imshow(
+                    np.nan_to_num(
+                        event_attn[d] / event_attn[d].sum(-1, keepdims=True)
+                    )
+                    .mean(0)
+                    .T,
+                    cmap="Blues",
+                    interpolation="none",
+                    origin="upper",
                 )
-                plt.yticks(np.arange(n), codes, family="monospace")
-                plt.gca().xaxis.tick_top()
+                plt.xticks(
+                    np.arange(encoding["n_tokens"][d]),
+                    ticklabels[d],
+                    rotation="vertical"
+                    if key in ("type", "instrument")
+                    else "horizontal",
+                )
+                plt.yticks(np.arange(encoding["n_tokens"][d]), ticklabels[d])
+                plt.tick_params(
+                    bottom=False,
+                    top=True,
+                    left=True,
+                    right=False,
+                    labelbottom=False,
+                    labeltop=True,
+                    labelleft=True,
+                    labelright=False,
+                )
+                # plt.xlabel("" if key == "type" else key.capitalize())
+                # plt.ylabel("" if key == "type" else key.capitalize())
+                # plt.gca().xaxis.set_label_position("top")
+                if key != "type":
+                    plt.xlim(0.5, encoding["n_tokens"][d] - 0.5)
+                    plt.ylim(encoding["n_tokens"][d] - 0.5, 0.5)
                 plt.tight_layout()
-                plt.savefig(sample_dir / f"{i}_head_{h}.png")
+                plt.savefig(
+                    sample_dir / f"{key}_mean.png",
+                    bbox_inches="tight",
+                    pad_inches=0,
+                )
+                plt.savefig(
+                    sample_dir / f"{key}_mean.pdf",
+                    bbox_inches="tight",
+                    pad_inches=0,
+                )
                 plt.close()
 
-            attn_maps = np.zeros((m, n2, n2))
-            for j in range(n2):
-                attn_maps[:, j, : (j + 1)] = attns[j]
-
-            mean_attn_maps = np.mean(attn_maps, 0)
-            plt.figure(figsize=(8, 8))
-            plt.imshow(mean_attn_maps.T, cmap="Blues", origin="upper")
-            codes = [
-                f"({c[0]},{c[1]},{c[2]:2},{c[3]:2},{c[4]:2},{c[5]:2})"
-                for c in generated_np[0, :n2]
-            ]
-            plt.xticks(np.arange(n2), codes, family="monospace", rotation=90)
-            plt.yticks(np.arange(n2), codes, family="monospace")
-            plt.gca().xaxis.tick_top()
-            plt.tight_layout()
-            plt.savefig(sample_dir / f"{i}_mean.png")
-            plt.close()
-
-            max_attn_maps = np.max(attn_maps, 0)
-            plt.figure(figsize=(8, 8))
-            plt.imshow(max_attn_maps.T, cmap="Blues", origin="upper")
-            codes = [
-                f"({c[0]},{c[1]},{c[2]:2},{c[3]:2},{c[4]:2},{c[5]:2})"
-                for c in generated_np[0, :n2]
-            ]
-            plt.xticks(np.arange(n2), codes, family="monospace", rotation=90)
-            plt.yticks(np.arange(n2), codes, family="monospace")
-            plt.gca().xaxis.tick_top()
-            plt.tight_layout()
-            plt.savefig(sample_dir / f"{i}_max.png")
-            plt.close()
+            for d, key in enumerate(encoding["dimensions"]):
+                if key in ("type", "duration", "instrument"):
+                    continue
+                # relative_event_attn_sum = relative_event_attn[d].sum(
+                #     0, keepdims=True
+                # )
+                plt.figure(figsize=(6, 1.5))
+                plt.imshow(
+                    np.nan_to_num(
+                        relative_event_attn[d]
+                        / relative_event_attn[d].sum(-1, keepdims=True)
+                        # np.concatenate(
+                        #     (
+                        #         relative_event_attn[d]
+                        #         / relative_event_attn[d].sum(
+                        #             -1, keepdims=True
+                        #         ),
+                        #         relative_event_attn_sum
+                        #         / relative_event_attn_sum.sum(
+                        #             -1, keepdims=True
+                        #         ),
+                        #     ),
+                        #     0,
+                        # )
+                    ),
+                    cmap="Blues",
+                    aspect="auto",
+                    interpolation="none",
+                )
+                # plt.axhline(3.5, color="k", lw=1)
+                if key == "beat":
+                    s = encoding["n_tokens"][d] % 4
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2)[s::4],
+                        np.arange(
+                            -encoding["n_tokens"][d],
+                            encoding["n_tokens"][d],
+                        )[s::4],
+                    )
+                    plt.xlim(
+                        encoding["n_tokens"][d] - 40.5,
+                        encoding["n_tokens"][d] + 4.5,
+                    )
+                elif key == "position":
+                    s = encoding["n_tokens"][d] % 4
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2)[s::4],
+                        np.arange(
+                            -encoding["n_tokens"][d],
+                            encoding["n_tokens"][d],
+                        )[s::4],
+                    )
+                    plt.xlim(
+                        encoding["n_tokens"][d] - 24,
+                        encoding["n_tokens"][d] + 24,
+                    )
+                elif key == "pitch":
+                    s = encoding["n_tokens"][d] % 5
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2)[s::5],
+                        np.arange(
+                            -encoding["n_tokens"][d],
+                            encoding["n_tokens"][d],
+                        )[s::5],
+                    )
+                    plt.xlim(
+                        encoding["n_tokens"][d] - 25.5,
+                        encoding["n_tokens"][d] + 25.5,
+                    )
+                else:
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2),
+                        np.arange(
+                            -encoding["n_tokens"][d], encoding["n_tokens"][d]
+                        ),
+                    )
+                plt.ylabel("Attention\nhead")
+                plt.yticks(np.arange(4), np.arange(4) + 1)
+                # plt.yticks(
+                #     np.arange(5),
+                #     ("Head 1", "Head 2", "Head 3", "Head 4", "Mean"),
+                # )
+                plt.xlabel(f"{key.capitalize()} difference")
+                plt.tight_layout()
+                plt.savefig(
+                    sample_dir / f"{key}_rel.png",
+                    bbox_inches="tight",
+                    pad_inches=0,
+                )
+                plt.savefig(
+                    sample_dir / f"{key}_rel.pdf",
+                    bbox_inches="tight",
+                    pad_inches=0,
+                )
+                plt.close()
 
 
 if __name__ == "__main__":

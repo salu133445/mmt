@@ -1,3 +1,9 @@
+import argparse
+import logging
+import pathlib
+import pprint
+import sys
+
 import torch
 import torch.nn.functional as F
 from einops import repeat
@@ -20,6 +26,29 @@ from x_transformers.x_transformers import (
     exists,
 )
 
+import representation
+import utils
+
+
+@utils.resolve_paths
+def parse_args(args=None, namespace=None):
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-d",
+        "--dataset",
+        choices=("sod", "lmd"),
+        required=True,
+        help="dataset key",
+    )
+    parser.add_argument(
+        "-i", "--in_dir", type=pathlib.Path, help="input data directory"
+    )
+    parser.add_argument(
+        "-q", "--quiet", action="store_true", help="show warnings only"
+    )
+    return parser.parse_args(args=args, namespace=namespace)
+
 
 class MusicTransformerWrapper(nn.Module):
     def __init__(
@@ -35,7 +64,7 @@ class MusicTransformerWrapper(nn.Module):
         emb_dropout=0.0,
         num_memory_tokens=None,
         tie_embedding=False,
-        use_pos_emb=True,
+        use_abs_pos_emb=True,
         l2norm_embed=False,
     ):
         super().__init__()
@@ -66,7 +95,7 @@ class MusicTransformerWrapper(nn.Module):
             AbsolutePositionalEmbedding(
                 emb_dim, max_seq_len, l2norm_embed=l2norm_embed
             )
-            if (use_pos_emb and not attn_layers.has_pos_emb)
+            if (use_abs_pos_emb and not attn_layers.has_pos_emb)
             else always(0)
         )
 
@@ -250,8 +279,6 @@ class MusicAutoregressiveWrapper(nn.Module):
     ):
         _, t, dim = start_tokens.shape
 
-        # Get the dimension indices
-
         if isinstance(temperature, (float, int)):
             temperature = [temperature] * dim
         else:
@@ -304,8 +331,6 @@ class MusicAutoregressiveWrapper(nn.Module):
             current_values = None
 
         instrument_dim = self.dimensions["instrument"]
-        if return_attn:
-            attns = []
         for _ in range(seq_len):
             x = out[:, -self.max_seq_len :]
             mask = mask[:, -self.max_seq_len :]
@@ -319,9 +344,6 @@ class MusicAutoregressiveWrapper(nn.Module):
                 logits = [
                     l[:, -1, :] for l in self.net(x, mask=mask, **kwargs)
                 ]
-
-            if return_attn:
-                attns.append(attn[-1][:, :, -1].cpu().numpy())
 
             # Enforce monotonicity
             if monotonicity_dim is not None and 0 in monotonicity_dim:
@@ -430,7 +452,7 @@ class MusicAutoregressiveWrapper(nn.Module):
         self.net.train(was_training)
 
         if return_attn:
-            return out, attns
+            return out, attn
 
         return out
 
@@ -469,6 +491,7 @@ class MusicXTransformer(nn.Module):
             "max_seq_len": kwargs.pop("max_seq_len"),
             "max_beat": kwargs.pop("max_beat"),
             "emb_dropout": kwargs.pop("emb_dropout", 0),
+            "use_abs_pos_emb": kwargs.pop("use_abs_pos_emb", True),
         }
         self.decoder = MusicTransformerWrapper(
             encoding=encoding,
@@ -489,13 +512,35 @@ class MusicXTransformer(nn.Module):
 
 def main():
     """Main function."""
+    # Parse the command-line arguments
+    args = parse_args()
+
+    # Set default arguments
+    if args.dataset is not None:
+        if args.in_dir is None:
+            args.in_dir = pathlib.Path(f"data/{args.dataset}/processed/notes")
+
+    # Set up the logger
+    logging.basicConfig(
+        stream=sys.stdout,
+        level=logging.ERROR if args.quiet else logging.INFO,
+        format="%(levelname)-8s %(message)s",
+    )
+
+    # Log arguments
+    logging.info(f"Using arguments:\n{pprint.pformat(vars(args))}")
+
+    # Load the encoding
+    encoding = representation.load_encoding(args.in_dir / "encoding.json")
+
     # Create the model
     model = MusicXTransformer(
         dim=128,
-        encoding={"n_tokens": [128, 128, 128]},
+        encoding=encoding,
         depth=3,
         heads=4,
         max_seq_len=1024,
+        max_beat=256,
         rel_pos_bias=True,  # relative positional bias
         rotary_pos_emb=True,  # rotary positional encoding
         emb_dropout=0.1,
@@ -512,7 +557,7 @@ def main():
     print(f"Number of trainable parameters: {n_trainables}")
 
     # Create test data
-    seq = torch.randint(0, 128, (1, 1024, 3))
+    seq = torch.randint(0, 4, (1, 1024, 6))
     mask = torch.ones((1, 1024)).bool()
 
     # Pass test data through the model

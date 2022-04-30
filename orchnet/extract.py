@@ -21,7 +21,11 @@ def parse_args(args=None, namespace=None):
         description="Extract note sequences from music"
     )
     parser.add_argument(
-        "-d", "--dataset", choices=("sod", "lmd"), help="dataset key"
+        "-d",
+        "--dataset",
+        choices=("sod", "lmd"),
+        required=True,
+        help="dataset key",
     )
     parser.add_argument("-n", "--names", type=pathlib.Path, help="input names")
     parser.add_argument(
@@ -50,7 +54,7 @@ def parse_args(args=None, namespace=None):
 
 
 def extract(name, in_dir, out_dir, resolution):
-    """Encode a note sequence into the beat representation."""
+    """Encode a note sequence into the representation."""
     # Load the score
     music = muspy.load(in_dir / f"{name}.json")
 
@@ -58,18 +62,20 @@ def extract(name, in_dir, out_dir, resolution):
     notes = representation.extract_notes(music, resolution)
 
     # Filter out bad files
-    if len(notes) < 10:
+    if len(notes) < 50:
         return
 
-    # Save the notes as CSV files
-    out_filename = out_dir / f"{name}.csv"
-    out_filename.parent.mkdir(exist_ok=True)
-    representation.save_csv_notes(out_filename, notes)
+    # Set start beat to zero
+    notes[:, 0] = notes[:, 0] - notes[0, 0]
 
-    # Save the notes as NPY files
-    out_filename = out_dir / f"{name}.npy"
-    out_filename.parent.mkdir(exist_ok=True)
-    np.save(out_filename, notes)
+    # Make sure output directory exists
+    (out_dir / name).parent.mkdir(exist_ok=True)
+
+    # Save the notes as a CSV file
+    representation.save_csv_notes(out_dir / f"{name}.csv", notes)
+
+    # Save the notes as a NPY file
+    np.save(out_dir / f"{name}.npy", notes)
 
     return name
 

@@ -9,7 +9,8 @@ import numpy as np
 import torch
 import torch.utils.data
 
-import representation
+import representation_mmm
+import representation_remi
 import utils
 
 
@@ -23,6 +24,13 @@ def parse_args(args=None, namespace=None):
         choices=("sod", "lmd"),
         required=True,
         help="dataset key",
+    )
+    parser.add_argument(
+        "-r",
+        "--representation",
+        choices=("mmm", "remi"),
+        required=True,
+        help="representation key",
     )
     parser.add_argument("-n", "--names", type=pathlib.Path, help="input names")
     parser.add_argument(
@@ -45,7 +53,7 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-mb",
         "--max_beat",
-        default=256,
+        default=64,
         type=int,
         help="maximum number of beats",
     )
@@ -102,6 +110,8 @@ class MusicDataset(torch.utils.data.Dataset):
         filename,
         data_dir,
         encoding,
+        indexer,
+        encode_fn,
         max_seq_len=None,
         max_beat=None,
         use_csv=False,
@@ -112,6 +122,8 @@ class MusicDataset(torch.utils.data.Dataset):
         with open(filename) as f:
             self.names = [line.strip() for line in f if line]
         self.encoding = encoding
+        self.indexer = indexer
+        self.encode_fn = encode_fn
         self.max_seq_len = max_seq_len
         self.max_beat = max_beat
         self.use_csv = use_csv
@@ -163,11 +175,11 @@ class MusicDataset(torch.utils.data.Dataset):
                 notes = notes[notes[:, 0] < self.max_beat]
 
         # Encode the notes
-        seq = representation.encode_notes(notes, self.encoding)
+        seq = self.encode_fn(notes, self.encoding, self.indexer)
 
         # Trim sequence to max_seq_len
         if self.max_seq_len is not None and len(seq) > self.max_seq_len:
-            seq = np.concatenate((seq[: self.max_seq_len - 1], seq[-1:]))
+            seq = np.concatenate((seq[: self.max_seq_len - 2], seq[-2:]))
 
         return {"name": name, "seq": seq}
 
@@ -197,6 +209,10 @@ def main():
             args.in_dir = pathlib.Path(f"data/{args.dataset}/processed/notes")
     if args.jobs is None:
         args.jobs = min(args.batch_size, 8)
+    if args.representation == "mmm":
+        representation = representation_mmm
+    elif args.representation == "remi":
+        representation = representation_remi
 
     # Set up the logger
     logging.basicConfig(
@@ -209,13 +225,18 @@ def main():
     logging.info(f"Using arguments:\n{pprint.pformat(vars(args))}")
 
     # Load the encoding
-    encoding = representation.load_encoding(args.in_dir / "encoding.json")
+    encoding = representation.get_encoding()
+
+    # Get the indexer
+    indexer = representation.Indexer(encoding["event_code_map"])
 
     # Create the dataset and data loader
     dataset = MusicDataset(
         args.names,
         args.in_dir,
         encoding=encoding,
+        indexer=indexer,
+        encode_fn=representation.encode_notes,
         max_seq_len=args.max_seq_len,
         max_beat=args.max_beat,
         use_csv=args.use_csv,
@@ -248,6 +269,11 @@ def main():
     logging.info(f"Avg sequence length: {np.mean(seq_lens):2f}")
     logging.info(f"Min sequence length: {min(seq_lens)}")
     logging.info(f"Max sequence length: {max(seq_lens)}")
+
+    # # Save the trained indexer
+    # filename = pathlib.Path(__file__).parent / f"indexer_{args.dataset}.json"
+    # utils.save_json(filename, indexer.get_dict())
+    # logging.info(f"Successfully saved the trained indexer to: {filename}")
 
 
 if __name__ == "__main__":

@@ -3,6 +3,8 @@ import json
 import pathlib
 import warnings
 
+import numpy as np
+
 
 def save_args(filename, args):
     """Save the command-line arguments."""
@@ -43,6 +45,18 @@ def load_json(filename):
     """Load data from a JSON file."""
     with open(filename, encoding="utf8") as f:
         return json.load(f)
+
+
+def save_csv(filename, data, header=""):
+    """Save data as a CSV file."""
+    np.savetxt(
+        filename, data, fmt="%d", delimiter=",", header=header, comments=""
+    )
+
+
+def load_csv(filename, skiprows=1):
+    """Load data from a CSV file."""
+    return np.loadtxt(filename, dtype=int, delimiter=",", skiprows=skiprows)
 
 
 def ignore_exceptions(func):

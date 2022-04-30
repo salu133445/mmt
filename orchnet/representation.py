@@ -13,7 +13,9 @@ RESOLUTION = 24
 MAX_BEAT = 1024
 MAX_DURATION = 384  # Remember to modify known durations as well!
 
-# Dimensions (NOTE: "type" must be the first dimension)
+# Dimensions
+# (NOTE: "type" must be the first dimension!)
+# (NOTE: Remember to modify N_TOKENS as well!)
 DIMENSIONS = ["type", "beat", "position", "pitch", "duration", "instrument"]
 assert DIMENSIONS[0] == "type"
 
@@ -306,6 +308,9 @@ INSTRUMENT_PROGRAM_MAP = {
     "melodic-tom": 117,
     "synth-drums": 118,
 }
+KNOWN_PROGRAMS = list(
+    k for k, v in PROGRAM_INSTRUMENT_MAP.items() if v is not None
+)
 KNOWN_INSTRUMENTS = list(dict.fromkeys(INSTRUMENT_PROGRAM_MAP.keys()))
 INSTRUMENT_CODE_MAP = {
     instrument: i + 1 for i, instrument in enumerate(KNOWN_INSTRUMENTS)
@@ -385,6 +390,8 @@ def extract_notes(music, resolution):
     # Extract notes
     notes = []
     for track in music:
+        if track.program not in KNOWN_PROGRAMS:
+            continue
         for note in track:
             beat, position = divmod(note.time, resolution)
             notes.append(
@@ -544,7 +551,7 @@ def decode_notes(codes, encoding):
 def reconstruct(notes, resolution):
     """Reconstruct a note sequence to a MusPy Music object."""
     # Construct the MusPy Music object
-    music = muspy.Music(resolution=resolution)
+    music = muspy.Music(resolution=resolution, tempos=muspy.Tempo(0, 100))
 
     # Append the tracks
     programs = sorted(set(note[-1] for note in notes))
@@ -626,6 +633,12 @@ def dump(data, encoding):
             raise ValueError(f"Unknown event type: {event_type}")
 
     return "\n".join(lines)
+
+
+def save_txt(filename, data, encoding):
+    """Dump the codes into a TXT file."""
+    with open(filename, "w") as f:
+        f.write(dump(data, encoding))
 
 
 def save_csv_notes(filename, data):
