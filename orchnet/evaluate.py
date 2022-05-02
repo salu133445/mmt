@@ -161,9 +161,6 @@ def main():
     if args.filter_thresholds:
         args.filter_threshold = None
 
-    # Save command-line arguments
-    utils.save_args(args.out_dir / "evaluate-args.json", args)
-
     # Set up the logger
     logging.basicConfig(
         level=logging.ERROR if args.quiet else logging.INFO,
@@ -179,6 +176,17 @@ def main():
 
     # Log arguments
     logging.info(f"Using arguments:\n{pprint.pformat(vars(args))}")
+
+    # Save command-line arguments
+    logging.info(f"Saved arguments to {args.out_dir / 'evaluate-args.json'}")
+    utils.save_args(args.out_dir / "evaluate-args.json", args)
+
+    # Load training configurations
+    logging.info(
+        f"Loading training arguments from: {args.out_dir / 'train-args.json'}"
+    )
+    train_args = utils.load_json(args.out_dir / "train-args.json")
+    logging.info(f"Using loaded arguments:\n{pprint.pformat(train_args)}")
 
     # Make sure the output directory exists
     eval_dir = args.out_dir / "eval"
@@ -200,9 +208,6 @@ def main():
         f"cuda:{args.gpu}" if args.gpu is not None else "cpu"
     )
     logging.info(f"Using device: {device}")
-
-    # Load training configurations
-    train_args = utils.load_json(args.out_dir / "train-args.json")
 
     # Load the encoding
     encoding = representation.load_encoding(args.in_dir / "encoding.json")
@@ -236,9 +241,8 @@ def main():
         heads=train_args["heads"],
         max_seq_len=train_args["max_seq_len"],
         max_beat=train_args["max_beat"],
-        rel_pos_bias=not train_args["disable_relative_positional_embedding"],
-        rotary_pos_emb=not train_args["disable_relative_positional_embedding"],
-        use_abs_pos_emb=not disable_absolute_positional_embedding,
+        rotary_pos_emb=train_args["rel_pos_emb"],
+        use_abs_pos_emb=train_args["abs_pos_emb"],
         emb_dropout=train_args["dropout"],
         attn_dropout=train_args["dropout"],
         ff_dropout=train_args["dropout"],
@@ -306,98 +310,93 @@ def main():
                 eval_dir / "unconditioned",
             )
             results["unconditioned"].append(result)
-            # for i, sliced in enumerate(generated_np):
-            #     result = evaluate(
-            #         sliced, encoding, f"{idx}_{i}", eval_dir / "unconditioned"
-            #     )
-            #     results["unconditioned"].append(result)
 
-            # ------------------------------
-            # Instrument-informed generation
-            # ------------------------------
+            # # ------------------------------
+            # # Instrument-informed generation
+            # # ------------------------------
 
-            # Get output start tokens
-            prefix_len = int(np.argmax(batch["seq"][0, :, 1] >= beat_0))
-            tgt_start = batch["seq"][:1, :prefix_len].to(device)
+            # # Get output start tokens
+            # prefix_len = int(np.argmax(batch["seq"][0, :, 1] >= beat_0))
+            # tgt_start = batch["seq"][:1, :prefix_len].to(device)
 
-            # Generate new samples
-            generated = model.generate(
-                tgt_start,
-                args.seq_len,
-                eos_token=eos,
-                temperature=temperature,
-                filter_logits_fn=logits_filter,
-                filter_thres=filter_thres,
-                monotonicity_dim=("type", "beat"),
-            )
-            generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
+            # # Generate new samples
+            # generated = model.generate(
+            #     tgt_start,
+            #     args.seq_len,
+            #     eos_token=eos,
+            #     temperature=temperature,
+            #     filter_logits_fn=logits_filter,
+            #     filter_thres=filter_thres,
+            #     monotonicity_dim=("type", "beat"),
+            # )
+            # generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
 
-            # Evaluate the results
-            result = evaluate(
-                generated_np[0],
-                encoding,
-                f"{idx}_0",
-                eval_dir / "instrument-informed",
-            )
-            results["instrument-informed"].append(result)
+            # # Evaluate the results
+            # result = evaluate(
+            #     generated_np[0],
+            #     encoding,
+            #     f"{idx}_0",
+            #     eval_dir / "instrument-informed",
+            # )
+            # results["instrument-informed"].append(result)
 
-            # -------------------
-            # 4-beat continuation
-            # -------------------
+            # # -------------------
+            # # 4-beat continuation
+            # # -------------------
 
-            # Get output start tokens
-            cond_len = int(np.argmax(batch["seq"][0, :, 1] >= beat_4))
-            tgt_start = batch["seq"][:1, :cond_len].to(device)
+            # # Get output start tokens
+            # cond_len = int(np.argmax(batch["seq"][0, :, 1] >= beat_4))
+            # tgt_start = batch["seq"][:1, :cond_len].to(device)
 
-            # Generate new samples
-            generated = model.generate(
-                tgt_start,
-                args.seq_len,
-                eos_token=eos,
-                temperature=temperature,
-                filter_logits_fn=logits_filter,
-                filter_thres=filter_thres,
-                monotonicity_dim=("type", "beat"),
-            )
-            generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
+            # # Generate new samples
+            # generated = model.generate(
+            #     tgt_start,
+            #     args.seq_len,
+            #     eos_token=eos,
+            #     temperature=temperature,
+            #     filter_logits_fn=logits_filter,
+            #     filter_thres=filter_thres,
+            #     monotonicity_dim=("type", "beat"),
+            # )
+            # generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
 
-            # Evaluate the results
-            result = evaluate(
-                generated_np[0],
-                encoding,
-                f"{idx}_0",
-                eval_dir / "4-beat-continuation",
-            )
-            results["4-beat-continuation"].append(result)
+            # # Evaluate the results
+            # result = evaluate(
+            #     generated_np[0],
+            #     encoding,
+            #     f"{idx}_0",
+            #     eval_dir / "4-beat-continuation",
+            # )
+            # results["4-beat-continuation"].append(result)
 
-            # --------------------
-            # 16-beat continuation
-            # --------------------
+            # # --------------------
+            # # 16-beat continuation
+            # # --------------------
 
-            # Get output start tokens
-            cond_len = int(np.argmax(batch["seq"][0, :, 1] >= beat_16))
-            tgt_start = batch["seq"][:1, :cond_len].to(device)
+            # # Get output start tokens
+            # cond_len = int(np.argmax(batch["seq"][0, :, 1] >= beat_16))
+            # tgt_start = batch["seq"][:1, :cond_len].to(device)
 
-            # Generate new samples
-            generated = model.generate(
-                tgt_start,
-                args.seq_len,
-                eos_token=eos,
-                temperature=temperature,
-                filter_logits_fn=logits_filter,
-                filter_thres=filter_thres,
-                monotonicity_dim=("type", "beat"),
-            )
-            generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
+            # # Generate new samples
+            # generated = model.generate(
+            #     tgt_start,
+            #     args.seq_len,
+            #     eos_token=eos,
+            #     temperature=temperature,
+            #     filter_logits_fn=logits_filter,
+            #     filter_thres=filter_thres,
+            #     monotonicity_dim=("type", "beat"),
+            # )
+            # generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
 
-            # Evaluate the results
-            result = evaluate(
-                generated_np[0],
-                encoding,
-                f"{idx}_0",
-                eval_dir / "16-beat-continuation",
-            )
-            results["16-beat-continuation"].append(result)
+            # # Evaluate the results
+            # result = evaluate(
+            #     generated_np[0],
+            #     encoding,
+            #     f"{idx}_0",
+            #     eval_dir / "16-beat-continuation",
+            # )
+            # results["16-beat-continuation"].append(result)
 
     for exp, result in results.items():
         logging.info(exp)

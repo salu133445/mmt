@@ -196,6 +196,13 @@ def main():
     # Log arguments
     logging.info(f"Using arguments:\n{pprint.pformat(vars(args))}")
 
+    # Load training configurations
+    logging.info(
+        f"Loading training arguments from: {args.out_dir / 'train-args.json'}"
+    )
+    train_args = utils.load_json(args.out_dir / "train-args.json")
+    logging.info(f"Using loaded arguments:\n{pprint.pformat(train_args)}")
+
     # Make sure the sample directory exists
     sample_dir = args.out_dir / "samples"
     sample_dir.mkdir(exist_ok=True)
@@ -214,9 +221,6 @@ def main():
         f"cuda:{args.gpu}" if args.gpu is not None else "cpu"
     )
     logging.info(f"Using device: {device}")
-
-    # Load training configurations
-    train_args = utils.load_json(args.out_dir / "train-args.json")
 
     # Get representation
     if train_args["representation"] == "mmm":

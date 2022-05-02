@@ -41,83 +41,76 @@ def parse_args(args=None, namespace=None):
     )
     # Data
     parser.add_argument(
-        "-c",
         "--use_csv",
         action="store_true",
         help="whether to save outputs in CSV format (default to NPY format)",
     )
     parser.add_argument(
-        "-b",
+        "-bs",
         "--batch_size",
         default=8,
         type=int,
         help="batch size",
     )
     parser.add_argument(
-        "-na",
-        "--disable_augmentation",
-        action="store_true",
-        help="whether to disable augmentation",
+        "--aug",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="whether to use data augmentation",
     )
     # Model
     parser.add_argument(
-        "-m",
         "--max_seq_len",
         default=1024,
         type=int,
         help="maximum sequence length",
     )
     parser.add_argument(
-        "-mb",
         "--max_beat",
         default=256,
         type=int,
         help="maximum number of beats",
     )
-    parser.add_argument(
-        "-dim", "--dim", default=512, type=int, help="model dimension"
-    )
+    parser.add_argument("--dim", default=512, type=int, help="model dimension")
     parser.add_argument(
         "-l", "--layers", default=8, type=int, help="number of layers"
     )
     parser.add_argument(
-        "-ah", "--heads", default=4, type=int, help="number of attention heads"
+        "--heads", default=4, type=int, help="number of attention heads"
     )
     parser.add_argument(
-        "-do", "--dropout", default=0.1, type=float, help="dropout rate"
+        "--dropout", default=0.1, type=float, help="dropout rate"
     )
     parser.add_argument(
-        "-np",
-        "--disable_absolute_positional_embedding",
-        action="store_true",
-        help="whether to disable absolute positional embedding",
+        "--rel_pos_emb",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="whether to use relative positional embedding",
     )
     parser.add_argument(
-        "-nr",
-        "--disable_relative_positional_embedding",
-        action="store_true",
-        help="whether to disable relative positional embedding",
+        "--abs_pos_emb",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="whether to use absolute positional embedding",
     )
     # Training
     parser.add_argument(
-        "-s",
         "--steps",
         default=100000,
         type=int,
         help="number of steps",
     )
     parser.add_argument(
-        "-vs",
         "--valid_steps",
         default=1000,
         type=int,
         help="validation frequency",
     )
     parser.add_argument(
-        "-ne",
-        "--disable_early_stopping",
-        action="store_true",
-        help="whether to disable early stopping",
+        "--early_stopping",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="whether to use early stopping",
     )
     parser.add_argument(
         "-e",
@@ -134,25 +127,22 @@ def parse_args(args=None, namespace=None):
         help="learning rate",
     )
     parser.add_argument(
-        "-lrw",
-        "--learning_rate_warmup_steps",
+        "--lr_warmup_steps",
         default=5000,
         type=int,
         help="learning rate warmup steps",
     )
     parser.add_argument(
-        "-lrm",
-        "--learning_rate_decay_end_multiplier",
-        default=0.1,
-        type=float,
-        help="learning rate multiplier at the end",
-    )
-    parser.add_argument(
-        "-lrs",
-        "--learning_rate_decay_end_steps",
+        "--lr_decay_steps",
         default=100000,
         type=int,
         help="learning rate decay end steps",
+    )
+    parser.add_argument(
+        "--lr_decay_multiplier",
+        default=0.1,
+        type=float,
+        help="learning rate multiplier at the end",
     )
     # Others
     parser.add_argument("-g", "--gpu", type=int, help="gpu number")
@@ -212,9 +202,6 @@ def main():
     args.out_dir.mkdir(exist_ok=True)
     (args.out_dir / "checkpoints").mkdir(exist_ok=True)
 
-    # Save command-line arguments
-    utils.save_args(args.out_dir / "train-args.json", args)
-
     # Set up the logger
     logging.basicConfig(
         level=logging.ERROR if args.quiet else logging.INFO,
@@ -230,6 +217,10 @@ def main():
 
     # Log arguments
     logging.info(f"Using arguments:\n{pprint.pformat(vars(args))}")
+
+    # Save command-line arguments
+    logging.info(f"Saved arguments to {args.out_dir / 'train-args.json'}")
+    utils.save_args(args.out_dir / "train-args.json", args)
 
     # Get the specified device
     device = torch.device(
@@ -248,7 +239,7 @@ def main():
         encoding,
         max_seq_len=args.max_seq_len,
         max_beat=args.max_beat,
-        use_augmentation=not args.disable_augmentation,
+        use_augmentation=args.aug,
         use_csv=args.use_csv,
     )
     train_loader = torch.utils.data.DataLoader(
@@ -282,9 +273,8 @@ def main():
         heads=args.heads,
         max_seq_len=args.max_seq_len,
         max_beat=args.max_beat,
-        rel_pos_bias=not args.disable_relative_positional_embedding,
-        rotary_pos_emb=not args.disable_relative_positional_embedding,
-        use_abs_pos_emb=not args.disable_absolute_positional_embedding,
+        rotary_pos_emb=args.rel_pos_emb,
+        use_abs_pos_emb=args.abs_pos_emb,
         emb_dropout=args.dropout,
         attn_dropout=args.dropout,
         ff_dropout=args.dropout,
@@ -304,9 +294,9 @@ def main():
         optimizer,
         lr_lambda=lambda step: get_lr_multiplier(
             step,
-            args.learning_rate_warmup_steps,
-            args.learning_rate_decay_end_steps,
-            args.learning_rate_decay_end_multiplier,
+            args.lr_warmup_steps,
+            args.lr_decay_steps,
+            args.lr_decay_multiplier,
         ),
     )
 
@@ -320,7 +310,7 @@ def main():
     # Initialize variables
     step = 0
     min_val_loss = float("inf")
-    if not args.disable_early_stopping:
+    if args.early_stopping:
         count_early_stopping = 0
 
     # Iterate for the specified number of steps
@@ -420,15 +410,15 @@ def main():
                 args.out_dir / "checkpoints" / "best_model.pt",
             )
             # Reset the early stopping counter if we found a better model
-            if not args.disable_early_stopping:
+            if args.early_stopping:
                 count_early_stopping = 0
-        elif not args.disable_early_stopping:
+        elif args.early_stopping:
             # Increment the early stopping counter if no improvement is found
             count_early_stopping += 1
 
         # Early stopping
         if (
-            not args.disable_early_stopping
+            args.early_stopping
             and count_early_stopping > args.early_stopping_tolerance
         ):
             logging.info(

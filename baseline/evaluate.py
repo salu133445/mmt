@@ -132,9 +132,6 @@ def main():
         if args.out_dir is None:
             args.out_dir = pathlib.Path(f"exp/test_{args.dataset}")
 
-    # Save command-line arguments
-    utils.save_args(args.out_dir / "evaluate-args.json", args)
-
     # Set up the logger
     logging.basicConfig(
         level=logging.ERROR if args.quiet else logging.INFO,
@@ -150,6 +147,17 @@ def main():
 
     # Log arguments
     logging.info(f"Using arguments:\n{pprint.pformat(vars(args))}")
+
+    # Save command-line arguments
+    logging.info(f"Saved arguments to {args.out_dir / 'evaluate-args.json'}")
+    utils.save_args(args.out_dir / "evaluate-args.json", args)
+
+    # Load training configurations
+    logging.info(
+        f"Loading training arguments from: {args.out_dir / 'train-args.json'}"
+    )
+    train_args = utils.load_json(args.out_dir / "train-args.json")
+    logging.info(f"Using loaded arguments:\n{pprint.pformat(train_args)}")
 
     # Make sure the output directory exists
     eval_dir = args.out_dir / "eval"
@@ -171,9 +179,6 @@ def main():
         f"cuda:{args.gpu}" if args.gpu is not None else "cpu"
     )
     logging.info(f"Using device: {device}")
-
-    # Load training configurations
-    train_args = utils.load_json(args.out_dir / "train-args.json")
 
     # Get representation
     if train_args["representation"] == "mmm":
@@ -201,7 +206,9 @@ def main():
         args.in_dir,
         encoding=encoding,
         indexer=indexer,
+        encode_fn=representation.encode_notes,
         max_seq_len=train_args["max_seq_len"],
+        max_beat=train_args["max_beat"],
         use_csv=args.use_csv,
     )
     test_loader = torch.utils.data.DataLoader(

@@ -12,6 +12,7 @@ dependencies:
   - scipy=1.8.0
   - matplotlib=3.5.1
   - tqdm=4.64.0
+  - scikit-learn-1.0.2
   - cudatoolkit=10.2
   - pytorch::pytorch=1.11.0
   - pylint

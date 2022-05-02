@@ -42,12 +42,7 @@ def parse_args(args=None, namespace=None):
         type=int,
         help="number of samples to generate",
     )
-    parser.add_argument(
-        "-c",
-        "--use_csv",
-        action="store_true",
-        help="whether to save outputs in CSV format (default to NPY format)",
-    )
+    # Data
     parser.add_argument(
         "-s",
         "--shuffle",
@@ -55,59 +50,39 @@ def parse_args(args=None, namespace=None):
         help="whether to shuffle the test data",
     )
     parser.add_argument(
-        "-m",
+        "--use_csv",
+        action="store_true",
+        help="whether to save outputs in CSV format (default to NPY format)",
+    )
+
+    parser.add_argument(
         "--model_steps",
         type=int,
         help="step of the trained model to load (default to the best model)",
     )
     parser.add_argument(
-        "-sl",
-        "--seq_len",
-        default=1024,
-        type=int,
-        help="sequence length to generate",
+        "--seq_len", default=1024, type=int, help="sequence length to generate"
     )
     parser.add_argument(
-        "-t",
         "--temperature",
+        nargs="+",
         default=1.0,
         type=float,
         help="sampling temperature (default: 1.0)",
     )
     parser.add_argument(
-        "-ts",
-        "--temperatures",
-        nargs="+",
-        type=float,
-        help="sampling temperatures",
-    )
-    parser.add_argument(
-        "-f",
         "--filter",
+        nargs="+",
         default="top_k",
         type=str,
         help="sampling filter (default: 'top_k')",
     )
     parser.add_argument(
-        "-fs",
-        "--filters",
-        nargs="+",
-        type=str,
-        help="sampling filters",
-    )
-    parser.add_argument(
-        "-ft",
         "--filter_threshold",
+        nargs="+",
         default=0.9,
         type=float,
         help="sampling filter threshold (default: 0.9)",
-    )
-    parser.add_argument(
-        "-fts",
-        "--filter_thresholds",
-        nargs="+",
-        type=float,
-        help="sampling filter thresholds",
     )
     parser.add_argument("-g", "--gpu", type=int, help="gpu number")
     parser.add_argument(
@@ -135,6 +110,11 @@ def save_result(filename, data, sample_dir, encoding):
 
     # Save as a CSV file
     representation.save_csv_codes(sample_dir / "csv" / f"{filename}.csv", data)
+
+    # Save as a TXT file
+    representation.save_txt(
+        sample_dir / "txt" / f"{filename}.txt", data, encoding
+    )
 
     # Convert to a MusPy Music object
     music = representation.decode(data, encoding)
@@ -172,20 +152,6 @@ def save_result(filename, data, sample_dir, encoding):
         sample_dir / "png-trimmed" / f"{filename}.png", music, (10, 5)
     )
 
-    # Save the trimmed version as a WAV file
-    music.write(
-        sample_dir / "wav-trimmed" / f"{filename}.wav",
-        options="-o synth.polyphony=4096",
-    )
-
-    # Save also as a MP3 file
-    subprocess.check_output(
-        ["ffmpeg", "-loglevel", "error", "-y", "-i"]
-        + [str(sample_dir / "wav-trimmed" / f"{filename}.wav")]
-        + ["-b:a", "192k"]
-        + [str(sample_dir / "mp3-trimmed" / f"{filename}.mp3")]
-    )
-
 
 def main():
     """Main function."""
@@ -202,18 +168,6 @@ def main():
             args.in_dir = pathlib.Path(f"data/{args.dataset}/processed/notes/")
         if args.out_dir is None:
             args.out_dir = pathlib.Path(f"exp/test_{args.dataset}")
-    temperature = args.temperatures or args.temperature
-    logits_filter = args.filters or args.filter
-    filter_thres = args.filter_thresholds or args.filter_threshold
-    if args.temperatures:
-        args.temperature = None
-    if args.filters:
-        args.filter = None
-    if args.filter_thresholds:
-        args.filter_threshold = None
-
-    # Save command-line arguments
-    utils.save_args(args.out_dir / "generate-args.json", args)
 
     # Set up the logger
     logging.basicConfig(
@@ -231,28 +185,35 @@ def main():
     # Log arguments
     logging.info(f"Using arguments:\n{pprint.pformat(vars(args))}")
 
+    # Save command-line arguments
+    logging.info(f"Saved arguments to {args.out_dir / 'generate-args.json'}")
+    utils.save_args(args.out_dir / "generate-args.json", args)
+
+    # Load training configurations
+    logging.info(
+        f"Loading training arguments from: {args.out_dir / 'train-args.json'}"
+    )
+    train_args = utils.load_json(args.out_dir / "train-args.json")
+    logging.info(f"Using loaded arguments:\n{pprint.pformat(train_args)}")
+
     # Make sure the sample directory exists
     sample_dir = args.out_dir / "samples"
     sample_dir.mkdir(exist_ok=True)
     (sample_dir / "npy").mkdir(exist_ok=True)
     (sample_dir / "csv").mkdir(exist_ok=True)
+    (sample_dir / "txt").mkdir(exist_ok=True)
     (sample_dir / "json").mkdir(exist_ok=True)
     (sample_dir / "png").mkdir(exist_ok=True)
     (sample_dir / "png-trimmed").mkdir(exist_ok=True)
     (sample_dir / "mid").mkdir(exist_ok=True)
     (sample_dir / "wav").mkdir(exist_ok=True)
-    (sample_dir / "wav-trimmed").mkdir(exist_ok=True)
     (sample_dir / "mp3").mkdir(exist_ok=True)
-    (sample_dir / "mp3-trimmed").mkdir(exist_ok=True)
 
     # Get the specified device
     device = torch.device(
         f"cuda:{args.gpu}" if args.gpu is not None else "cpu"
     )
     logging.info(f"Using device: {device}")
-
-    # Load training configurations
-    train_args = utils.load_json(args.out_dir / "train-args.json")
 
     # Load the encoding
     encoding = representation.load_encoding(args.in_dir / "encoding.json")
@@ -276,11 +237,6 @@ def main():
 
     # Create the model
     logging.info(f"Creating the model...")
-    disable_absolute_positional_embedding = train_args.get(
-        "disable_absolute_positional_embedding"
-    )
-    if disable_absolute_positional_embedding is None:
-        disable_absolute_positional_embedding = False
     model = music_x_transformers.MusicXTransformer(
         dim=train_args["dim"],
         encoding=encoding,
@@ -288,9 +244,8 @@ def main():
         heads=train_args["heads"],
         max_seq_len=train_args["max_seq_len"],
         max_beat=train_args["max_beat"],
-        rel_pos_bias=not train_args["disable_relative_positional_embedding"],
-        rotary_pos_emb=not train_args["disable_relative_positional_embedding"],
-        use_abs_pos_emb=not disable_absolute_positional_embedding,
+        rotary_pos_emb=train_args["rel_pos_emb"],
+        use_abs_pos_emb=train_args["abs_pos_emb"],
         emb_dropout=train_args["dropout"],
         attn_dropout=train_args["dropout"],
         ff_dropout=train_args["dropout"],
@@ -338,9 +293,9 @@ def main():
                 tgt_start,
                 args.seq_len,
                 eos_token=eos,
-                temperature=temperature,
-                filter_logits_fn=logits_filter,
-                filter_thres=filter_thres,
+                temperature=args.temperature,
+                filter_logits_fn=args.filter,
+                filter_thres=args.filter_threshold,
                 monotonicity_dim=("type", "beat"),
             )
             generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
@@ -363,9 +318,9 @@ def main():
                 tgt_start,
                 args.seq_len,
                 eos_token=eos,
-                temperature=temperature,
-                filter_logits_fn=logits_filter,
-                filter_thres=filter_thres,
+                temperature=args.temperature,
+                filter_logits_fn=args.filter,
+                filter_thres=args.filter_threshold,
                 monotonicity_dim=("type", "beat"),
             )
             generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
@@ -391,9 +346,9 @@ def main():
                 tgt_start,
                 args.seq_len,
                 eos_token=eos,
-                temperature=temperature,
-                filter_logits_fn=logits_filter,
-                filter_thres=filter_thres,
+                temperature=args.temperature,
+                filter_logits_fn=args.filter,
+                filter_thres=args.filter_threshold,
                 monotonicity_dim=("type", "beat"),
             )
             generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
@@ -419,9 +374,9 @@ def main():
                 tgt_start,
                 args.seq_len,
                 eos_token=eos,
-                temperature=temperature,
-                filter_logits_fn=logits_filter,
-                filter_thres=filter_thres,
+                temperature=args.temperature,
+                filter_logits_fn=args.filter,
+                filter_thres=args.filter_threshold,
                 monotonicity_dim=("type", "beat"),
             )
             generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()

@@ -37,16 +37,11 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-ns",
         "--n_samples",
-        default=10,
+        default=100,
         type=int,
         help="number of samples to generate",
     )
-    parser.add_argument(
-        "-c",
-        "--use_csv",
-        action="store_true",
-        help="whether to save outputs in CSV format (default to NPY format)",
-    )
+    # Data
     parser.add_argument(
         "-s",
         "--shuffle",
@@ -54,52 +49,38 @@ def parse_args(args=None, namespace=None):
         help="whether to shuffle the test data",
     )
     parser.add_argument(
-        "-m",
+        "--use_csv",
+        action="store_true",
+        help="whether to save outputs in CSV format (default to NPY format)",
+    )
+    parser.add_argument(
         "--model_steps",
         type=int,
         help="step of the trained model to load (default to the best model)",
     )
     parser.add_argument(
-        "-t",
+        "--seq_len", default=1024, type=int, help="sequence length to generate"
+    )
+    parser.add_argument(
         "--temperature",
+        nargs="+",
         default=1.0,
         type=float,
         help="sampling temperature (default: 1.0)",
     )
     parser.add_argument(
-        "-ts",
-        "--temperatures",
-        nargs="+",
-        type=float,
-        help="sampling temperatures",
-    )
-    parser.add_argument(
-        "-f",
         "--filter",
+        nargs="+",
         default="top_k",
         type=str,
         help="sampling filter (default: 'top_k')",
     )
     parser.add_argument(
-        "-fs",
-        "--filters",
-        nargs="+",
-        type=str,
-        help="sampling filters",
-    )
-    parser.add_argument(
-        "-ft",
         "--filter_threshold",
+        nargs="+",
         default=0.9,
         type=float,
         help="sampling filter threshold (default: 0.9)",
-    )
-    parser.add_argument(
-        "-fts",
-        "--filter_thresholds",
-        nargs="+",
-        type=float,
-        help="sampling filter thresholds",
     )
     parser.add_argument("-g", "--gpu", type=int, help="gpu number")
     parser.add_argument(
@@ -126,18 +107,6 @@ def main():
             args.in_dir = pathlib.Path(f"data/{args.dataset}/processed/notes/")
         if args.out_dir is None:
             args.out_dir = pathlib.Path(f"exp/test_{args.dataset}")
-    temperature = args.temperatures or args.temperature
-    logits_filter = args.filters or args.filter
-    filter_thres = args.filter_thresholds or args.filter_threshold
-    if args.temperatures:
-        args.temperature = None
-    if args.filters:
-        args.filter = None
-    if args.filter_thresholds:
-        args.filter_threshold = None
-
-    # Save command-line arguments
-    utils.save_args(args.out_dir / "visualize-args.json", args)
 
     # Set up the logger
     logging.basicConfig(
@@ -155,6 +124,17 @@ def main():
     # Log arguments
     logging.info(f"Using arguments:\n{pprint.pformat(vars(args))}")
 
+    # Save command-line arguments
+    logging.info(f"Saved arguments to {args.out_dir / 'visualize-args.json'}")
+    utils.save_args(args.out_dir / "visualize-args.json", args)
+
+    # Load training configurations
+    logging.info(
+        f"Loading training arguments from: {args.out_dir / 'train-args.json'}"
+    )
+    train_args = utils.load_json(args.out_dir / "train-args.json")
+    logging.info(f"Using loaded arguments:\n{pprint.pformat(train_args)}")
+
     # Make sure the sample directory exists
     sample_dir = args.out_dir / "visualizations"
     sample_dir.mkdir(exist_ok=True)
@@ -164,9 +144,6 @@ def main():
         f"cuda:{args.gpu}" if args.gpu is not None else "cpu"
     )
     logging.info(f"Using device: {device}")
-
-    # Load training configurations
-    train_args = utils.load_json(args.out_dir / "train-args.json")
 
     # Load the encoding
     encoding = representation.load_encoding(args.in_dir / "encoding.json")
@@ -197,8 +174,8 @@ def main():
         heads=train_args["heads"],
         max_seq_len=train_args["max_seq_len"],
         max_beat=train_args["max_beat"],
-        rel_pos_bias=not train_args["disable_relative_positional_embedding"],
-        rotary_pos_emb=not train_args["disable_relative_positional_embedding"],
+        rotary_pos_emb=train_args["rel_pos_emb"],
+        use_abs_pos_emb=train_args["abs_pos_emb"],
         emb_dropout=train_args["dropout"],
         attn_dropout=train_args["dropout"],
         ff_dropout=train_args["dropout"],
@@ -220,90 +197,14 @@ def main():
 
     # Iterate over the dataset
     with torch.no_grad():
-        # for idx in tqdm.tqdm(range(args.n_samples), ncols=80):
-
-        #     # Get output start tokens
-        #     tgt_start = torch.zeros((1, 1, 6), dtype=torch.long, device=device)
-        #     tgt_start[:, 0, 0] = sos
-
-        #     # Sequence length
-        #     n = 50
-        #     n2 = 50
-
-        #     # Generate new samples
-        #     generated, attns = model.generate(
-        #         tgt_start,
-        #         max(n, n2),
-        #         eos_token=eos,
-        #         temperature=temperature,
-        #         filter_logits_fn=logits_filter,
-        #         filter_thres=filter_thres,
-        #         monotonicity_dim=("type", "beat"),
-        #         return_attn=True,
-        #     )
-        #     generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
-        #     attn = attns[-1][0].cpu().numpy()
-
-        #     n_heads = len(attn)
-
-        #     for h in range(n_heads):
-        #         plt.figure(figsize=(8, 8))
-        #         plt.imshow(attn[h].T, cmap="Blues", origin="upper")
-        #         codes = [
-        #             f"({c[0]},{c[1]},{c[2]:2},{c[3]:2},{c[4]:2},{c[5]:2})"
-        #             for c in generated_np[0, : n + 1]
-        #         ]
-        #         plt.xticks(
-        #             np.arange(n), codes[1:], family="monospace", rotation=90
-        #         )
-        #         plt.yticks(np.arange(n), codes[:-1], family="monospace")
-        #         plt.gca().xaxis.tick_top()
-        #         plt.tight_layout()
-        #         plt.savefig(sample_dir / f"{idx}_head_{h}.png", pad_inches=0)
-        #         plt.close()
-
-        #     plt.figure(figsize=(8, 8))
-        #     plt.imshow(np.mean(attn, 0).T, cmap="Blues", origin="upper")
-        #     codes = [
-        #         f"({c[0]},{c[1]},{c[2]:2},{c[3]:2},{c[4]:2},{c[5]:2})"
-        #         for c in generated_np[0, : n2 + 1]
-        #     ]
-        #     plt.xticks(
-        #         np.arange(n2), codes[1:], family="monospace", rotation=90
-        #     )
-        #     plt.yticks(np.arange(n2), codes[:-1], family="monospace")
-        #     plt.gca().xaxis.tick_top()
-        #     plt.tight_layout()
-        #     plt.savefig(sample_dir / f"{idx}_mean.png", pad_inches=0)
-        #     plt.close()
-
-        #     plt.figure(figsize=(8, 8))
-        #     plt.imshow(np.max(attn, 0).T, cmap="Blues", origin="upper")
-        #     codes = [
-        #         f"({c[0]},{c[1]},{c[2]:2},{c[3]:2},{c[4]:2},{c[5]:2})"
-        #         for c in generated_np[0, : n2 + 1]
-        #     ]
-        #     plt.xticks(
-        #         np.arange(n2), codes[1:], family="monospace", rotation=90
-        #     )
-        #     plt.yticks(np.arange(n2), codes[:-1], family="monospace")
-        #     plt.gca().xaxis.tick_top()
-        #     plt.tight_layout()
-        #     plt.savefig(sample_dir / f"{idx}_max.png", pad_inches=0)
-        #     plt.close()
-
         event_attn = [np.zeros((4, n, n)) for n in encoding["n_tokens"]]
         relative_event_attn = [
             np.zeros((4, 2 * n)) for n in encoding["n_tokens"]
         ]
         test_iter = iter(test_loader)
-        for idx in tqdm.tqdm(range(args.n_samples), ncols=80):
+        for _ in tqdm.tqdm(range(args.n_samples), ncols=80):
 
             batch = next(test_iter)
-
-            # # Get output start tokens
-            # tgt_start = torch.zeros((1, 1, 6), dtype=torch.long, device=device)
-            # tgt_start[:, 0, 0] = sos
 
             tgt_start = batch["seq"][:, :1000].to(device)
 
@@ -312,9 +213,9 @@ def main():
                 tgt_start,
                 1,
                 eos_token=eos,
-                temperature=temperature,
-                filter_logits_fn=logits_filter,
-                filter_thres=filter_thres,
+                temperature=args.temperature,
+                filter_logits_fn=args.filter,
+                filter_thres=args.filter_threshold,
                 monotonicity_dim=("type", "beat"),
                 return_attn=True,
             )
@@ -424,22 +325,15 @@ def main():
                         labelleft=True,
                         labelright=False,
                     )
-                    # plt.xlabel("" if key == "type" else key.capitalize())
-                    # plt.ylabel("" if key == "type" else key.capitalize())
-                    # plt.gca().xaxis.set_label_position("top")
                     if key != "type":
                         plt.xlim(0.5, encoding["n_tokens"][d] - 0.5)
                         plt.ylim(encoding["n_tokens"][d] - 0.5, 0.5)
                     plt.tight_layout()
                     plt.savefig(
-                        sample_dir / f"{key}_head-{h}.png",
-                        bbox_inches="tight",
-                        pad_inches=0,
+                        sample_dir / f"{key}_head-{h}.png", bbox_inches="tight"
                     )
                     plt.savefig(
-                        sample_dir / f"{key}_head-{h}.pdf",
-                        bbox_inches="tight",
-                        pad_inches=0,
+                        sample_dir / f"{key}_head-{h}.pdf", bbox_inches="tight"
                     )
                     plt.close()
 
@@ -478,9 +372,6 @@ def main():
                     labelleft=True,
                     labelright=False,
                 )
-                # plt.xlabel("" if key == "type" else key.capitalize())
-                # plt.ylabel("" if key == "type" else key.capitalize())
-                # plt.gca().xaxis.set_label_position("top")
                 if key != "type":
                     plt.xlim(0.5, encoding["n_tokens"][d] - 0.5)
                     plt.ylim(encoding["n_tokens"][d] - 0.5, 0.5)
@@ -488,45 +379,25 @@ def main():
                 plt.savefig(
                     sample_dir / f"{key}_mean.png",
                     bbox_inches="tight",
-                    pad_inches=0,
                 )
                 plt.savefig(
-                    sample_dir / f"{key}_mean.pdf",
-                    bbox_inches="tight",
-                    pad_inches=0,
+                    sample_dir / f"{key}_mean.pdf", bbox_inches="tight"
                 )
                 plt.close()
 
             for d, key in enumerate(encoding["dimensions"]):
                 if key in ("type", "duration", "instrument"):
                     continue
-                # relative_event_attn_sum = relative_event_attn[d].sum(
-                #     0, keepdims=True
-                # )
                 plt.figure(figsize=(6, 1.5))
                 plt.imshow(
                     np.nan_to_num(
                         relative_event_attn[d]
                         / relative_event_attn[d].sum(-1, keepdims=True)
-                        # np.concatenate(
-                        #     (
-                        #         relative_event_attn[d]
-                        #         / relative_event_attn[d].sum(
-                        #             -1, keepdims=True
-                        #         ),
-                        #         relative_event_attn_sum
-                        #         / relative_event_attn_sum.sum(
-                        #             -1, keepdims=True
-                        #         ),
-                        #     ),
-                        #     0,
-                        # )
                     ),
                     cmap="Blues",
                     aspect="auto",
                     interpolation="none",
                 )
-                # plt.axhline(3.5, color="k", lw=1)
                 if key == "beat":
                     s = encoding["n_tokens"][d] % 4
                     plt.xticks(
@@ -575,22 +446,10 @@ def main():
                     )
                 plt.ylabel("Attention\nhead")
                 plt.yticks(np.arange(4), np.arange(4) + 1)
-                # plt.yticks(
-                #     np.arange(5),
-                #     ("Head 1", "Head 2", "Head 3", "Head 4", "Mean"),
-                # )
                 plt.xlabel(f"{key.capitalize()} difference")
                 plt.tight_layout()
-                plt.savefig(
-                    sample_dir / f"{key}_rel.png",
-                    bbox_inches="tight",
-                    pad_inches=0,
-                )
-                plt.savefig(
-                    sample_dir / f"{key}_rel.pdf",
-                    bbox_inches="tight",
-                    pad_inches=0,
-                )
+                plt.savefig(sample_dir / f"{key}_rel.png", bbox_inches="tight")
+                plt.savefig(sample_dir / f"{key}_rel.pdf", bbox_inches="tight")
                 plt.close()
 
 

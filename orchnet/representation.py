@@ -551,7 +551,7 @@ def decode_notes(codes, encoding):
 def reconstruct(notes, resolution):
     """Reconstruct a note sequence to a MusPy Music object."""
     # Construct the MusPy Music object
-    music = muspy.Music(resolution=resolution, tempos=muspy.Tempo(0, 100))
+    music = muspy.Music(resolution=resolution, tempos=[muspy.Tempo(0, 100)])
 
     # Append the tracks
     programs = sorted(set(note[-1] for note in notes))
