@@ -80,7 +80,7 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-s",
         "--steps",
-        default=100000,
+        default=1000000,
         type=int,
         help="number of steps",
     )

@@ -270,11 +270,6 @@ def main():
     logging.info(f"Min sequence length: {min(seq_lens)}")
     logging.info(f"Max sequence length: {max(seq_lens)}")
 
-    # # Save the trained indexer
-    # filename = pathlib.Path(__file__).parent / f"indexer_{args.dataset}.json"
-    # utils.save_json(filename, indexer.get_dict())
-    # logging.info(f"Successfully saved the trained indexer to: {filename}")
-
 
 if __name__ == "__main__":
     main()

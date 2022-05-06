@@ -2,18 +2,15 @@ import argparse
 import logging
 import pathlib
 import pprint
-import subprocess
 import sys
+import time
 
-import matplotlib.pyplot as plt
-import numpy as np
 import torch
 import torch.utils.data
 import tqdm
 import x_transformers
 import x_transformers.autoregressive_wrapper
 
-import dataset
 import representation_mmm
 import representation_remi
 import utils
@@ -40,21 +37,9 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-ns",
         "--n_samples",
-        default=10,
+        default=100,
         type=int,
         help="number of samples to generate",
-    )
-    parser.add_argument(
-        "-c",
-        "--use_csv",
-        action="store_true",
-        help="whether to save outputs in CSV format (default to NPY format)",
-    )
-    parser.add_argument(
-        "-s",
-        "--shuffle",
-        action="store_true",
-        help="whether to shuffle the test data",
     )
     parser.add_argument(
         "-m",
@@ -100,67 +85,6 @@ def parse_args(args=None, namespace=None):
     return parser.parse_args(args=args, namespace=namespace)
 
 
-def save_pianoroll(filename, music, size=None, **kwargs):
-    """Save the piano roll to file."""
-    music.show_pianoroll(track_label="program", **kwargs)
-    if size is not None:
-        plt.gcf().set_size_inches(size)
-    plt.savefig(filename)
-    plt.close()
-
-
-def save_result(
-    filename, data, sample_dir, encoding, vocabulary, representation
-):
-    """Save the results in multiple formats."""
-    # Save as a numpy array
-    np.save(sample_dir / "npy" / f"{filename}.npy", data)
-
-    # Save as a CSV file
-    representation.save_csv_codes(sample_dir / "csv" / f"{filename}.csv", data)
-
-    # Save as a TXT file
-    representation.save_txt(
-        sample_dir / "txt" / f"{filename}.txt", data, vocabulary
-    )
-
-    # Convert to a MusPy Music object
-    music = representation.decode(data, encoding, vocabulary)
-
-    # Save as a MusPy JSON file
-    music.save(sample_dir / "json" / f"{filename}.json")
-
-    # Save as a piano roll
-    save_pianoroll(
-        sample_dir / "png" / f"{filename}.png", music, (20, 5), preset="frame"
-    )
-
-    # Save as a MIDI file
-    music.write(sample_dir / "mid" / f"{filename}.mid")
-
-    # Save as a WAV file
-    music.write(
-        sample_dir / "wav" / f"{filename}.wav",
-        options="-o synth.polyphony=4096",
-    )
-
-    # Save also as a MP3 file
-    subprocess.check_output(
-        ["ffmpeg", "-loglevel", "error", "-y", "-i"]
-        + [str(sample_dir / "wav" / f"{filename}.wav")]
-        + ["-b:a", "192k"]
-        + [str(sample_dir / "mp3" / f"{filename}.mp3")]
-    )
-
-    # Trim the music
-    music.trim(music.resolution * 32)
-
-    # Save the trimmed version as a piano roll
-    save_pianoroll(
-        sample_dir / "png-trimmed" / f"{filename}.png", music, (10, 5)
-    )
-
-
 def main():
     """Main function."""
     # Parse the command-line arguments
@@ -182,7 +106,7 @@ def main():
         level=logging.ERROR if args.quiet else logging.INFO,
         format="%(levelname)-8s %(message)s",
         handlers=[
-            logging.FileHandler(args.out_dir / "generate.log", "w"),
+            logging.FileHandler(args.out_dir / "speed-test.log", "w"),
             logging.StreamHandler(sys.stdout),
         ],
     )
@@ -194,8 +118,8 @@ def main():
     logging.info(f"Using arguments:\n{pprint.pformat(vars(args))}")
 
     # Save command-line arguments
-    logging.info(f"Saved arguments to {args.out_dir / 'generate-args.json'}")
-    utils.save_args(args.out_dir / "generate-args.json", args)
+    logging.info(f"Saved arguments to {args.out_dir / 'speed-test-args.json'}")
+    utils.save_args(args.out_dir / "speed-test-args.json", args)
 
     # Load training configurations
     logging.info(
@@ -203,19 +127,6 @@ def main():
     )
     train_args = utils.load_json(args.out_dir / "train-args.json")
     logging.info(f"Using loaded arguments:\n{pprint.pformat(train_args)}")
-
-    # Make sure the sample directory exists
-    sample_dir = args.out_dir / "samples"
-    sample_dir.mkdir(exist_ok=True)
-    (sample_dir / "npy").mkdir(exist_ok=True)
-    (sample_dir / "csv").mkdir(exist_ok=True)
-    (sample_dir / "txt").mkdir(exist_ok=True)
-    (sample_dir / "json").mkdir(exist_ok=True)
-    (sample_dir / "png").mkdir(exist_ok=True)
-    (sample_dir / "png-trimmed").mkdir(exist_ok=True)
-    (sample_dir / "mid").mkdir(exist_ok=True)
-    (sample_dir / "wav").mkdir(exist_ok=True)
-    (sample_dir / "mp3").mkdir(exist_ok=True)
 
     # Get the specified device
     device = torch.device(
@@ -241,25 +152,6 @@ def main():
 
     # Get the vocabulary
     vocabulary = encoding["code_event_map"]
-
-    # Create the dataset and data loader
-    logging.info(f"Creating the data loader...")
-    test_dataset = dataset.MusicDataset(
-        args.names,
-        args.in_dir,
-        encoding=encoding,
-        indexer=indexer,
-        encode_fn=representation.encode_notes,
-        max_seq_len=train_args["max_seq_len"],
-        max_beat=train_args["max_beat"],
-        use_csv=args.use_csv,
-    )
-    test_loader = torch.utils.data.DataLoader(
-        test_dataset,
-        shuffle=args.shuffle,
-        num_workers=args.jobs,
-        collate_fn=dataset.MusicDataset.collate,
-    )
 
     # Create the model
     logging.info(f"Creating the model...")
@@ -310,34 +202,19 @@ def main():
     else:
         raise ValueError("Unknown logits filter.")
 
-    # Iterate over the dataset
+    # Iterate over
+    total_time = 0
+    total_notes = 0
     with torch.no_grad():
-        data_iter = iter(test_loader)
-        for i in tqdm.tqdm(range(args.n_samples), ncols=80):
-            batch = next(data_iter)
 
-            # ------------
-            # Ground truth
-            # ------------
-            truth_np = batch["seq"][0].numpy()
-            save_result(
-                f"{i}_truth",
-                truth_np,
-                sample_dir,
-                encoding,
-                vocabulary,
-                representation,
-            )
-
-            # ------------------------
-            # Unconditioned generation
-            # ------------------------
+        for _ in tqdm.tqdm(range(args.n_samples), ncols=80):
 
             # Get output start tokens
             tgt_start = torch.zeros((1, 1), dtype=torch.long, device=device)
             tgt_start[:, 0] = sos
 
             # Generate new samples
+            start = time.time()
             generated = model.generate(
                 tgt_start,
                 args.seq_len,
@@ -346,17 +223,22 @@ def main():
                 filter_logits_fn=filter_logits_fn,
                 filter_thres=args.filter_threshold,
             )
-            generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
+            total_time += time.time() - start
 
-            # Save the results
-            save_result(
-                f"{i}_unconditioned",
-                generated_np[0],
-                sample_dir,
-                encoding,
-                vocabulary,
-                representation,
+            # Decode the generated codes
+            generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
+            notes = representation.decode_notes(
+                generated_np[0], encoding, vocabulary
             )
+            total_notes += len(notes)
+
+        logging.info(f"Total time: {total_time} sec")
+        logging.info(
+            f"Mean time per sample: {total_time  / args.n_samples:.6f} sec"
+        )
+        logging.info(
+            f"Mean time per note: {total_time  / total_notes:.6f} sec"
+        )
 
 
 if __name__ == "__main__":

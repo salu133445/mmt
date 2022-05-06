@@ -127,6 +127,13 @@ def evaluate(data, encoding, filename, eval_dir):
     # Save as a MusPy JSON file
     music.save(eval_dir / "json" / f"{filename}.json")
 
+    if not music.tracks:
+        return {
+            "pitch_class_entropy": np.nan,
+            "scale_consistency": np.nan,
+            "groove_consistency": np.nan,
+        }
+
     return {
         "pitch_class_entropy": muspy.pitch_class_entropy(music),
         "scale_consistency": muspy.scale_consistency(music),
@@ -310,93 +317,6 @@ def main():
                 eval_dir / "unconditioned",
             )
             results["unconditioned"].append(result)
-
-            # # ------------------------------
-            # # Instrument-informed generation
-            # # ------------------------------
-
-            # # Get output start tokens
-            # prefix_len = int(np.argmax(batch["seq"][0, :, 1] >= beat_0))
-            # tgt_start = batch["seq"][:1, :prefix_len].to(device)
-
-            # # Generate new samples
-            # generated = model.generate(
-            #     tgt_start,
-            #     args.seq_len,
-            #     eos_token=eos,
-            #     temperature=temperature,
-            #     filter_logits_fn=logits_filter,
-            #     filter_thres=filter_thres,
-            #     monotonicity_dim=("type", "beat"),
-            # )
-            # generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
-
-            # # Evaluate the results
-            # result = evaluate(
-            #     generated_np[0],
-            #     encoding,
-            #     f"{idx}_0",
-            #     eval_dir / "instrument-informed",
-            # )
-            # results["instrument-informed"].append(result)
-
-            # # -------------------
-            # # 4-beat continuation
-            # # -------------------
-
-            # # Get output start tokens
-            # cond_len = int(np.argmax(batch["seq"][0, :, 1] >= beat_4))
-            # tgt_start = batch["seq"][:1, :cond_len].to(device)
-
-            # # Generate new samples
-            # generated = model.generate(
-            #     tgt_start,
-            #     args.seq_len,
-            #     eos_token=eos,
-            #     temperature=temperature,
-            #     filter_logits_fn=logits_filter,
-            #     filter_thres=filter_thres,
-            #     monotonicity_dim=("type", "beat"),
-            # )
-            # generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
-
-            # # Evaluate the results
-            # result = evaluate(
-            #     generated_np[0],
-            #     encoding,
-            #     f"{idx}_0",
-            #     eval_dir / "4-beat-continuation",
-            # )
-            # results["4-beat-continuation"].append(result)
-
-            # # --------------------
-            # # 16-beat continuation
-            # # --------------------
-
-            # # Get output start tokens
-            # cond_len = int(np.argmax(batch["seq"][0, :, 1] >= beat_16))
-            # tgt_start = batch["seq"][:1, :cond_len].to(device)
-
-            # # Generate new samples
-            # generated = model.generate(
-            #     tgt_start,
-            #     args.seq_len,
-            #     eos_token=eos,
-            #     temperature=temperature,
-            #     filter_logits_fn=logits_filter,
-            #     filter_thres=filter_thres,
-            #     monotonicity_dim=("type", "beat"),
-            # )
-            # generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
-
-            # # Evaluate the results
-            # result = evaluate(
-            #     generated_np[0],
-            #     encoding,
-            #     f"{idx}_0",
-            #     eval_dir / "16-beat-continuation",
-            # )
-            # results["16-beat-continuation"].append(result)
 
     for exp, result in results.items():
         logging.info(exp)

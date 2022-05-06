@@ -107,6 +107,13 @@ def evaluate(data, encoding, vocabulary, representation, filename, eval_dir):
     # Save as a MusPy JSON file
     music.save(eval_dir / "json" / f"{filename}.json")
 
+    if not music.tracks:
+        return {
+            "pitch_class_entropy": np.nan,
+            "scale_consistency": np.nan,
+            "groove_consistency": np.nan,
+        }
+
     return {
         "pitch_class_entropy": muspy.pitch_class_entropy(music),
         "scale_consistency": muspy.scale_consistency(music),

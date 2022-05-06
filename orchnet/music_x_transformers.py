@@ -331,6 +331,7 @@ class MusicAutoregressiveWrapper(nn.Module):
             current_values = None
 
         instrument_dim = self.dimensions["instrument"]
+        type_dim = self.dimensions["type"]
         for _ in range(seq_len):
             x = out[:, -self.max_seq_len :]
             mask = mask[:, -self.max_seq_len :]
@@ -349,6 +350,9 @@ class MusicAutoregressiveWrapper(nn.Module):
             if monotonicity_dim is not None and 0 in monotonicity_dim:
                 for i, v in enumerate(current_values[0]):
                     logits[0][i, :v] = -float("inf")
+
+            # Filter out sos token
+            logits[0][type_dim, 0] = -float("inf")
 
             # Sample from the logits
             sample_type = sample(
@@ -383,6 +387,7 @@ class MusicAutoregressiveWrapper(nn.Module):
                     samples[idx] += [torch.zeros_like(s_type)] * (
                         len(logits) - 2
                     )
+                    logits[instrument_dim][:, 0] = -float("inf")  # avoid none
                     sampled = sample(
                         logits[instrument_dim][idx : idx + 1],
                         filter_logits_fn[instrument_dim],
@@ -395,8 +400,6 @@ class MusicAutoregressiveWrapper(nn.Module):
                 # A note code
                 elif s_type == self.note_type_code:
                     for d in range(1, dim):
-                        logits[d][:, 0] = -float("inf")  # avoid none
-
                         # Enforce monotonicity
                         if (
                             monotonicity_dim is not None
@@ -407,6 +410,7 @@ class MusicAutoregressiveWrapper(nn.Module):
                             )
 
                         # Sample from the logits
+                        logits[d][:, 0] = -float("inf")  # avoid none
                         sampled = sample(
                             logits[d][idx : idx + 1],
                             filter_logits_fn[d],

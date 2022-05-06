@@ -289,12 +289,14 @@ def main():
         with np.errstate(divide="ignore", invalid="ignore"):
             for h in range(n_heads):
                 for d, key in enumerate(encoding["dimensions"]):
-                    if key in ("beat", "position", "pitch", "duration"):
+                    if key not in ("type", "duration", "instrument"):
                         continue
                     if key == "type":
-                        plt.figure(figsize=(3, 3))
+                        plt.figure(figsize=(2.5, 2.5))
                     elif key == "instrument":
                         plt.figure(figsize=(8, 8))
+                    elif key == "duration":
+                        plt.figure(figsize=(5, 5))
                     plt.imshow(
                         np.nan_to_num(
                             event_attn[d][h]
@@ -307,9 +309,7 @@ def main():
                     plt.xticks(
                         np.arange(encoding["n_tokens"][d]),
                         ticklabels[d],
-                        rotation="vertical"
-                        if key in ("type", "instrument")
-                        else "horizontal",
+                        rotation="vertical",
                     )
                     plt.yticks(
                         np.arange(encoding["n_tokens"][d]), ticklabels[d]
@@ -338,12 +338,14 @@ def main():
                     plt.close()
 
             for d, key in enumerate(encoding["dimensions"]):
-                if key in ("beat", "position", "pitch", "duration"):
+                if key not in ("type", "duration", "instrument"):
                     continue
                 if key == "type":
-                    plt.figure(figsize=(3, 3))
+                    plt.figure(figsize=(2.5, 2.5))
                 elif key == "instrument":
                     plt.figure(figsize=(8, 8))
+                elif key == "duration":
+                    plt.figure(figsize=(5, 5))
                 plt.imshow(
                     np.nan_to_num(
                         event_attn[d] / event_attn[d].sum(-1, keepdims=True)
@@ -357,9 +359,7 @@ def main():
                 plt.xticks(
                     np.arange(encoding["n_tokens"][d]),
                     ticklabels[d],
-                    rotation="vertical"
-                    if key in ("type", "instrument")
-                    else "horizontal",
+                    rotation="vertical",
                 )
                 plt.yticks(np.arange(encoding["n_tokens"][d]), ticklabels[d])
                 plt.tick_params(
@@ -386,7 +386,7 @@ def main():
                 plt.close()
 
             for d, key in enumerate(encoding["dimensions"]):
-                if key in ("type", "duration", "instrument"):
+                if key not in ("beat", "position", "pitch"):
                     continue
                 plt.figure(figsize=(6, 1.5))
                 plt.imshow(
