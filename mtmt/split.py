@@ -75,13 +75,15 @@ def main():
     # Get filenames
     logging.info("Loading names...")
     names = utils.load_txt(args.names)
+    logging.info(f"Loaded {len(names)} names.")
+    logging.info(f"Loaded {len(set(names))} names.")
 
     # Sample training and test names
     n_valid = int(len(names) * args.ratio_valid)
     n_test = int(len(names) * args.ratio_test)
     sampled = random.sample(names, n_valid + n_test)
-    valid_names = sampled[n_valid:]
-    test_names = sampled[:n_valid]
+    valid_names = sampled[:n_valid]
+    test_names = sampled[n_valid:]
     train_names = [name for name in names if name not in sampled]
 
     # Write training, validation and test names to files

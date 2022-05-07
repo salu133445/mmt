@@ -36,39 +36,38 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-i", "--in_dir", type=pathlib.Path, help="input data directory"
     )
+    # Data
     parser.add_argument(
-        "-b",
+        "-bs",
         "--batch_size",
         default=8,
         type=int,
         help="batch size",
     )
     parser.add_argument(
-        "-m",
+        "--use_csv",
+        action="store_true",
+        help="whether to save outputs in CSV format (default to NPY format)",
+    )
+    parser.add_argument(
+        "--aug",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="whether to use data augmentation",
+    )
+    parser.add_argument(
         "--max_seq_len",
         default=1024,
         type=int,
         help="maximum sequence length",
     )
     parser.add_argument(
-        "-mb",
         "--max_beat",
         default=64,
         type=int,
         help="maximum number of beats",
     )
-    parser.add_argument(
-        "-c",
-        "--use_csv",
-        action="store_true",
-        help="whether to save outputs in CSV format (default to NPY format)",
-    )
-    parser.add_argument(
-        "-na",
-        "--disable_augmentation",
-        action="store_true",
-        help="whether to disable data augmentation",
-    )
+    # Others
     parser.add_argument(
         "-j",
         "--jobs",
@@ -218,7 +217,7 @@ def main():
     logging.basicConfig(
         stream=sys.stdout,
         level=logging.ERROR if args.quiet else logging.INFO,
-        format="%(levelname)-8s %(message)s",
+        format="%(message)s",
     )
 
     # Log arguments
@@ -240,7 +239,7 @@ def main():
         max_seq_len=args.max_seq_len,
         max_beat=args.max_beat,
         use_csv=args.use_csv,
-        use_augmentation=not args.disable_augmentation,
+        use_augmentation=args.aug,
     )
     data_loader = torch.utils.data.DataLoader(
         dataset, args.batch_size, True, collate_fn=MusicDataset.collate

@@ -178,6 +178,7 @@ def main():
             for name in names
         )
         converted_names = [result for result in results if result is not None]
+    converted_names = sorted(set(converted_names))
     logging.info(
         f"Converted {len(converted_names)} out of {len(names)} files."
     )

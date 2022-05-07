@@ -39,6 +39,7 @@ def parse_args(args=None, namespace=None):
         type=int,
         help="number of samples to generate",
     )
+    # Model
     parser.add_argument(
         "--model_steps",
         type=int,
@@ -68,6 +69,7 @@ def parse_args(args=None, namespace=None):
         type=float,
         help="sampling filter threshold (default: 0.9)",
     )
+    # Others
     parser.add_argument("-g", "--gpu", type=int, help="gpu number")
     parser.add_argument(
         "-j", "--jobs", default=1, type=int, help="number of jobs"
@@ -97,7 +99,7 @@ def main():
     # Set up the logger
     logging.basicConfig(
         level=logging.ERROR if args.quiet else logging.INFO,
-        format="%(levelname)-8s %(message)s",
+        format="%(message)s",
         handlers=[
             logging.FileHandler(args.out_dir / "speed-test.log", "w"),
             logging.StreamHandler(sys.stdout),

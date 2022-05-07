@@ -37,52 +37,49 @@ def parse_args(args=None, namespace=None):
         "-o", "--out_dir", type=pathlib.Path, help="output directory"
     )
     parser.add_argument(
-        "-b",
+        "-bs",
         "--batch_size",
         default=8,
         type=int,
         help="batch size",
     )
+    # Data
     parser.add_argument(
-        "-c",
         "--use_csv",
         action="store_true",
         help="whether to save outputs in CSV format (default to NPY format)",
     )
+    # Model
     parser.add_argument(
-        "-s",
-        "--step",
+        "--model_steps",
         type=int,
         help="step of the trained model to load (default to the best model)",
     )
     parser.add_argument(
-        "-sl",
-        "--seq_len",
-        default=1024,
-        type=int,
-        help="sequence length to generate",
+        "--seq_len", default=1024, type=int, help="sequence length to generate"
     )
     parser.add_argument(
-        "-t",
         "--temperature",
+        nargs="+",
         default=1.0,
         type=float,
         help="sampling temperature (default: 1.0)",
     )
     parser.add_argument(
-        "-f",
         "--filter",
+        nargs="+",
         default="top_k",
         type=str,
         help="sampling filter (default: 'top_k')",
     )
     parser.add_argument(
-        "-ft",
         "--filter_threshold",
+        nargs="+",
         default=0.9,
         type=float,
         help="sampling filter threshold (default: 0.9)",
     )
+    # Others
     parser.add_argument("-g", "--gpu", type=int, help="gpu number")
     parser.add_argument(
         "-j", "--jobs", default=0, type=int, help="number of jobs"
@@ -142,7 +139,7 @@ def main():
     # Set up the logger
     logging.basicConfig(
         level=logging.ERROR if args.quiet else logging.INFO,
-        format="%(levelname)-8s %(message)s",
+        format="%(message)s",
         handlers=[
             logging.FileHandler(args.out_dir / "evaluate.log", "w"),
             logging.StreamHandler(sys.stdout),
@@ -169,13 +166,7 @@ def main():
     # Make sure the output directory exists
     eval_dir = args.out_dir / "eval"
     eval_dir.mkdir(exist_ok=True)
-    for key in (
-        "truth",
-        "unconditioned",
-        "instrument-informed",
-        "4-beat-continuation",
-        "16-beat-continuation",
-    ):
+    for key in ("truth", "unconditioned"):
         (eval_dir / key).mkdir(exist_ok=True)
         (eval_dir / key / "npy").mkdir(exist_ok=True)
         (eval_dir / key / "csv").mkdir(exist_ok=True)
@@ -233,28 +224,21 @@ def main():
             dim=train_args["dim"],
             depth=train_args["layers"],
             heads=train_args["heads"],
-            rel_pos_bias=not train_args[
-                "disable_relative_positional_embedding"
-            ],
-            rotary_pos_emb=not train_args[
-                "disable_relative_positional_embedding"
-            ],
+            rotary_pos_emb=train_args["rel_pos_emb"],
             emb_dropout=train_args["dropout"],
             attn_dropout=train_args["dropout"],
             ff_dropout=train_args["dropout"],
         ),
-        use_abs_pos_emb=not train_args[
-            "disable_absolute_positional_embedding"
-        ],
+        use_abs_pos_emb=train_args["abs_pos_emb"],
     ).to(device)
     model = x_transformers.AutoregressiveWrapper(model)
 
     # Load the checkpoint
     checkpoint_dir = args.out_dir / "checkpoints"
-    if args.step is None:
+    if args.model_steps is None:
         checkpoint_filename = checkpoint_dir / "best_model.pt"
     else:
-        checkpoint_filename = checkpoint_dir / f"model_{args.step}.pt"
+        checkpoint_filename = checkpoint_dir / f"model_{args.model_steps}.pt"
     model.load_state_dict(torch.load(checkpoint_filename, map_location=device))
     logging.info(f"Loaded the model weights from: {checkpoint_filename}")
     model.eval()

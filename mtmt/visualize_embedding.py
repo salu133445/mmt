@@ -33,12 +33,13 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-o", "--out_dir", type=pathlib.Path, help="output directory"
     )
+    # Model
     parser.add_argument(
         "--model_steps",
         type=int,
         help="step of the trained model to load (default to the best model)",
     )
-    # parser.add_argument("-g", "--gpu", type=int, help="gpu number")
+    # Others
     parser.add_argument(
         "-j", "--jobs", default=0, type=int, help="number of jobs"
     )
@@ -67,7 +68,7 @@ def main():
     # Set up the logger
     logging.basicConfig(
         level=logging.ERROR if args.quiet else logging.INFO,
-        format="%(levelname)-8s %(message)s",
+        format="%(message)s",
         handlers=[
             logging.FileHandler(args.out_dir / "visualize-embedding.log", "w"),
             logging.StreamHandler(sys.stdout),

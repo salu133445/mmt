@@ -44,12 +44,7 @@ def parse_args(args=None, namespace=None):
         type=int,
         help="number of samples to generate",
     )
-    parser.add_argument(
-        "-c",
-        "--use_csv",
-        action="store_true",
-        help="whether to save outputs in CSV format (default to NPY format)",
-    )
+    # Data
     parser.add_argument(
         "-s",
         "--shuffle",
@@ -57,39 +52,41 @@ def parse_args(args=None, namespace=None):
         help="whether to shuffle the test data",
     )
     parser.add_argument(
-        "-m",
+        "--use_csv",
+        action="store_true",
+        help="whether to save outputs in CSV format (default to NPY format)",
+    )
+    # Model
+    parser.add_argument(
         "--model_steps",
         type=int,
         help="step of the trained model to load (default to the best model)",
     )
     parser.add_argument(
-        "-sl",
-        "--seq_len",
-        default=1024,
-        type=int,
-        help="sequence length to generate",
+        "--seq_len", default=1024, type=int, help="sequence length to generate"
     )
     parser.add_argument(
-        "-t",
         "--temperature",
+        nargs="+",
         default=1.0,
         type=float,
         help="sampling temperature (default: 1.0)",
     )
     parser.add_argument(
-        "-f",
         "--filter",
+        nargs="+",
         default="top_k",
         type=str,
         help="sampling filter (default: 'top_k')",
     )
     parser.add_argument(
-        "-ft",
         "--filter_threshold",
+        nargs="+",
         default=0.9,
         type=float,
         help="sampling filter threshold (default: 0.9)",
     )
+    # Others
     parser.add_argument("-g", "--gpu", type=int, help="gpu number")
     parser.add_argument(
         "-j", "--jobs", default=1, type=int, help="number of jobs"
@@ -152,14 +149,6 @@ def save_result(
         + [str(sample_dir / "mp3" / f"{filename}.mp3")]
     )
 
-    # Trim the music
-    music.trim(music.resolution * 32)
-
-    # Save the trimmed version as a piano roll
-    save_pianoroll(
-        sample_dir / "png-trimmed" / f"{filename}.png", music, (10, 5)
-    )
-
 
 def main():
     """Main function."""
@@ -180,7 +169,7 @@ def main():
     # Set up the logger
     logging.basicConfig(
         level=logging.ERROR if args.quiet else logging.INFO,
-        format="%(levelname)-8s %(message)s",
+        format="%(message)s",
         handlers=[
             logging.FileHandler(args.out_dir / "generate.log", "w"),
             logging.StreamHandler(sys.stdout),
@@ -212,7 +201,6 @@ def main():
     (sample_dir / "txt").mkdir(exist_ok=True)
     (sample_dir / "json").mkdir(exist_ok=True)
     (sample_dir / "png").mkdir(exist_ok=True)
-    (sample_dir / "png-trimmed").mkdir(exist_ok=True)
     (sample_dir / "mid").mkdir(exist_ok=True)
     (sample_dir / "wav").mkdir(exist_ok=True)
     (sample_dir / "mp3").mkdir(exist_ok=True)
@@ -270,19 +258,12 @@ def main():
             dim=train_args["dim"],
             depth=train_args["layers"],
             heads=train_args["heads"],
-            rel_pos_bias=not train_args[
-                "disable_relative_positional_embedding"
-            ],
-            rotary_pos_emb=not train_args[
-                "disable_relative_positional_embedding"
-            ],
+            rotary_pos_emb=train_args["rel_pos_emb"],
             emb_dropout=train_args["dropout"],
             attn_dropout=train_args["dropout"],
             ff_dropout=train_args["dropout"],
         ),
-        use_abs_pos_emb=not train_args[
-            "disable_absolute_positional_embedding"
-        ],
+        use_abs_pos_emb=train_args["abs_pos_emb"],
     ).to(device)
     model = x_transformers.AutoregressiveWrapper(model)
 

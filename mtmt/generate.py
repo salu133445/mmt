@@ -35,6 +35,7 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-o", "--out_dir", type=pathlib.Path, help="output directory"
     )
+    # Model
     parser.add_argument(
         "-ns",
         "--n_samples",
@@ -42,7 +43,6 @@ def parse_args(args=None, namespace=None):
         type=int,
         help="number of samples to generate",
     )
-    # Data
     parser.add_argument(
         "-s",
         "--shuffle",
@@ -54,12 +54,12 @@ def parse_args(args=None, namespace=None):
         action="store_true",
         help="whether to save outputs in CSV format (default to NPY format)",
     )
-
     parser.add_argument(
         "--model_steps",
         type=int,
         help="step of the trained model to load (default to the best model)",
     )
+    # Sampling
     parser.add_argument(
         "--seq_len", default=1024, type=int, help="sequence length to generate"
     )
@@ -84,6 +84,7 @@ def parse_args(args=None, namespace=None):
         type=float,
         help="sampling filter threshold (default: 0.9)",
     )
+    # Others
     parser.add_argument("-g", "--gpu", type=int, help="gpu number")
     parser.add_argument(
         "-j", "--jobs", default=1, type=int, help="number of jobs"
@@ -186,7 +187,7 @@ def main():
     # Set up the logger
     logging.basicConfig(
         level=logging.ERROR if args.quiet else logging.INFO,
-        format="%(levelname)-8s %(message)s",
+        format="%(message)s",
         handlers=[
             logging.FileHandler(args.out_dir / "generate.log", "w"),
             logging.StreamHandler(sys.stdout),

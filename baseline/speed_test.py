@@ -104,7 +104,7 @@ def main():
     # Set up the logger
     logging.basicConfig(
         level=logging.ERROR if args.quiet else logging.INFO,
-        format="%(levelname)-8s %(message)s",
+        format="%(message)s",
         handlers=[
             logging.FileHandler(args.out_dir / "speed-test.log", "w"),
             logging.StreamHandler(sys.stdout),
@@ -162,19 +162,12 @@ def main():
             dim=train_args["dim"],
             depth=train_args["layers"],
             heads=train_args["heads"],
-            rel_pos_bias=not train_args[
-                "disable_relative_positional_embedding"
-            ],
-            rotary_pos_emb=not train_args[
-                "disable_relative_positional_embedding"
-            ],
+            rotary_pos_emb=train_args["rel_pos_emb"],
             emb_dropout=train_args["dropout"],
             attn_dropout=train_args["dropout"],
             ff_dropout=train_args["dropout"],
         ),
-        use_abs_pos_emb=not train_args[
-            "disable_absolute_positional_embedding"
-        ],
+        use_abs_pos_emb=train_args["abs_pos_emb"],
     ).to(device)
     model = x_transformers.AutoregressiveWrapper(model)
 

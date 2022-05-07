@@ -41,16 +41,16 @@ def parse_args(args=None, namespace=None):
     )
     # Data
     parser.add_argument(
-        "--use_csv",
-        action="store_true",
-        help="whether to save outputs in CSV format (default to NPY format)",
-    )
-    parser.add_argument(
         "-bs",
         "--batch_size",
         default=8,
         type=int,
         help="batch size",
+    )
+    parser.add_argument(
+        "--use_csv",
+        action="store_true",
+        help="whether to save outputs in CSV format (default to NPY format)",
     )
     parser.add_argument(
         "--aug",
@@ -205,7 +205,7 @@ def main():
     # Set up the logger
     logging.basicConfig(
         level=logging.ERROR if args.quiet else logging.INFO,
-        format="%(levelname)-8s %(message)s",
+        format="%(message)s",
         handlers=[
             logging.FileHandler(args.out_dir / "train.log", "w"),
             logging.StreamHandler(sys.stdout),

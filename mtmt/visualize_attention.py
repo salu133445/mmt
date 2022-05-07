@@ -53,6 +53,7 @@ def parse_args(args=None, namespace=None):
         action="store_true",
         help="whether to save outputs in CSV format (default to NPY format)",
     )
+    # Model
     parser.add_argument(
         "--model_steps",
         type=int,
@@ -82,6 +83,7 @@ def parse_args(args=None, namespace=None):
         type=float,
         help="sampling filter threshold (default: 0.9)",
     )
+    # Others
     parser.add_argument("-g", "--gpu", type=int, help="gpu number")
     parser.add_argument(
         "-j", "--jobs", default=0, type=int, help="number of jobs"
@@ -111,9 +113,9 @@ def main():
     # Set up the logger
     logging.basicConfig(
         level=logging.ERROR if args.quiet else logging.INFO,
-        format="%(levelname)-8s %(message)s",
+        format="%(message)s",
         handlers=[
-            logging.FileHandler(args.out_dir / "visualize.log", "w"),
+            logging.FileHandler(args.out_dir / "visualize-attention.log", "w"),
             logging.StreamHandler(sys.stdout),
         ],
     )
@@ -125,8 +127,10 @@ def main():
     logging.info(f"Using arguments:\n{pprint.pformat(vars(args))}")
 
     # Save command-line arguments
-    logging.info(f"Saved arguments to {args.out_dir / 'visualize-args.json'}")
-    utils.save_args(args.out_dir / "visualize-args.json", args)
+    logging.info(
+        f"Saved arguments to {args.out_dir / 'visualize-attention-args.json'}"
+    )
+    utils.save_args(args.out_dir / "visualize-attention-args.json", args)
 
     # Load training configurations
     logging.info(
