@@ -100,7 +100,7 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-e",
         "--early_stopping_tolerance",
-        default=10,
+        default=50,
         type=int,
         help="number of extra validation rounds before early stopping",
     )

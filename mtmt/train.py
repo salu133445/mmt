@@ -73,25 +73,25 @@ def parse_args(args=None, namespace=None):
     )
     parser.add_argument("--dim", default=512, type=int, help="model dimension")
     parser.add_argument(
-        "-l", "--layers", default=8, type=int, help="number of layers"
+        "-l", "--layers", default=6, type=int, help="number of layers"
     )
     parser.add_argument(
-        "--heads", default=4, type=int, help="number of attention heads"
+        "--heads", default=8, type=int, help="number of attention heads"
     )
     parser.add_argument(
-        "--dropout", default=0.1, type=float, help="dropout rate"
-    )
-    parser.add_argument(
-        "--rel_pos_emb",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="whether to use relative positional embedding",
+        "--dropout", default=0.2, type=float, help="dropout rate"
     )
     parser.add_argument(
         "--abs_pos_emb",
         action=argparse.BooleanOptionalAction,
-        default=False,
+        default=True,
         help="whether to use absolute positional embedding",
+    )
+    parser.add_argument(
+        "--rel_pos_emb",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="whether to use relative positional embedding",
     )
     # Training
     parser.add_argument(
@@ -115,7 +115,7 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-e",
         "--early_stopping_tolerance",
-        default=10,
+        default=50,
         type=int,
         help="number of extra validation rounds before early stopping",
     )

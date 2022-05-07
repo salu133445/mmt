@@ -15,32 +15,34 @@ import utils
 @utils.resolve_paths
 def parse_args(args=None, namespace=None):
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(description="Convert MIDI and MusicXML files into music JSON files.")
+    parser = argparse.ArgumentParser(
+        description="Convert MIDI and MusicXML files into music JSON files."
+    )
     parser.add_argument(
         "-n",
         "--names",
-        default="data/sod/processed/original-names.txt",
+        default="data/lmd/cleansed_ids.txt",
         type=pathlib.Path,
         help="input names",
     )
     parser.add_argument(
         "-i",
         "--in_dir",
-        default="data/sod/SOD/",
+        default="data/lmd/lmd_full/",
         type=pathlib.Path,
         help="input data directory",
     )
     parser.add_argument(
         "-o",
         "--out_dir",
-        default="data/sod/processed/json/",
+        default="data/lmd/processed/json/",
         type=pathlib.Path,
         help="output directory",
     )
     parser.add_argument(
         "-r",
         "--resolution",
-        default=24,
+        default=12,
         type=int,
         help="number of time steps per quarter note",
     )
@@ -78,8 +80,7 @@ def adjust_resolution(music, resolution):
 def convert(name, in_dir, out_dir, resolution, skip_existing):
     """Convert MIDI and MusicXML files into MusPy JSON files."""
     # Get output filename
-    collection, idx, _ = name.split("/")
-    out_name = f"{collection}/{collection}-{idx}"
+    out_name = f"{name[0]}/{name}"
     out_filename = out_dir / f"{out_name}.json"
 
     # Skip if the output file exists
@@ -87,7 +88,7 @@ def convert(name, in_dir, out_dir, resolution, skip_existing):
         return
 
     # Read the MIDI file
-    music = muspy.read(in_dir / name)
+    music = muspy.read(in_dir / name[0] / f"{name}.mid")
 
     # Adjust the resolution
     adjust_resolution(music, resolution)
@@ -143,7 +144,8 @@ def main():
 
     # Get names
     logging.info("Loading names...")
-    names = utils.load_txt(args.names)
+    with open(args.names, encoding="utf8") as f:
+        names = [line.strip().split(" ")[0] for line in f]
 
     # Iterate over names
     logging.info("Iterating over names...")

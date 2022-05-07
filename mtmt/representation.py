@@ -9,7 +9,7 @@ import pretty_midi
 import utils
 
 # Configuration
-RESOLUTION = 24
+RESOLUTION = 12
 MAX_BEAT = 1024
 MAX_DURATION = 384  # Remember to modify known durations as well!
 
@@ -49,6 +49,14 @@ KNOWN_DURATIONS = [
     1,
     2,
     3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
     12,
     15,
     16,
@@ -217,8 +225,8 @@ PROGRAM_INSTRUMENT_MAP = {
     117: "melodic-tom",
     118: "synth-drums",
     119: "synth-drums",
-    120: None,
     # Sound effects
+    120: None,
     121: None,
     122: None,
     123: None,
@@ -226,7 +234,6 @@ PROGRAM_INSTRUMENT_MAP = {
     125: None,
     126: None,
     127: None,
-    128: None,
 }
 INSTRUMENT_PROGRAM_MAP = {
     # Pianos
