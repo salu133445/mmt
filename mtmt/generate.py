@@ -35,14 +35,14 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-o", "--out_dir", type=pathlib.Path, help="output directory"
     )
-    # Model
     parser.add_argument(
         "-ns",
         "--n_samples",
-        default=10,
+        default=50,
         type=int,
         help="number of samples to generate",
     )
+    # Model
     parser.add_argument(
         "-s",
         "--shuffle",

@@ -96,7 +96,7 @@ def parse_args(args=None, namespace=None):
     # Training
     parser.add_argument(
         "--steps",
-        default=1000000,
+        default=200000,
         type=int,
         help="number of steps",
     )
@@ -115,14 +115,14 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-e",
         "--early_stopping_tolerance",
-        default=50,
+        default=20,
         type=int,
         help="number of extra validation rounds before early stopping",
     )
     parser.add_argument(
         "-lr",
         "--learning_rate",
-        default=0.001,
+        default=0.0005,
         type=float,
         help="learning rate",
     )
@@ -143,6 +143,12 @@ def parse_args(args=None, namespace=None):
         default=0.1,
         type=float,
         help="learning rate multiplier at the end",
+    )
+    parser.add_argument(
+        "--grad_norm_clip",
+        default=1.0,
+        type=float,
+        help="gradient norm clipping",
     )
     # Others
     parser.add_argument("-g", "--gpu", type=int, help="gpu number")
@@ -289,7 +295,7 @@ def main():
     logging.info(f"Number of trainable parameters: {n_trainables}")
 
     # Create the optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), args.learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), args.learning_rate)
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer,
         lr_lambda=lambda step: get_lr_multiplier(
@@ -339,6 +345,9 @@ def main():
             optimizer.zero_grad()
             loss = model(seq, mask=mask)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(), args.grad_norm_clip
+            )
             optimizer.step()
             scheduler.step()
 

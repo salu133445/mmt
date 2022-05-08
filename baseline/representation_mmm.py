@@ -9,7 +9,7 @@ import numpy as np
 import utils
 
 # Configuration
-RESOLUTION = 24
+RESOLUTION = 12
 MAX_BEAT = 1024
 MAX_TIME_SHIFT = RESOLUTION * 4
 

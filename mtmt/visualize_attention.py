@@ -196,21 +196,24 @@ def main():
     model.eval()
 
     # Get EOS token
-    sos = encoding["type_code_map"]["start-of-song"]
     eos = encoding["type_code_map"]["end-of-song"]
+
+    # Initialize vairables
+    n_dim = len(encoding["dimensions"])
+    n_heads = train_args["heads"]
+    event_attn = [np.zeros((n_heads, n, n)) for n in encoding["n_tokens"]]
+    relative_event_attn = [
+        np.zeros((n_heads, 2 * n)) for n in encoding["n_tokens"]
+    ]
 
     # Iterate over the dataset
     with torch.no_grad():
-        event_attn = [np.zeros((4, n, n)) for n in encoding["n_tokens"]]
-        relative_event_attn = [
-            np.zeros((4, 2 * n)) for n in encoding["n_tokens"]
-        ]
         test_iter = iter(test_loader)
         for _ in tqdm.tqdm(range(args.n_samples), ncols=80):
 
             batch = next(test_iter)
 
-            tgt_start = batch["seq"][:, :1000].to(device)
+            tgt_start = batch["seq"][:, : args.seq_len - 1].to(device)
 
             # Generate new samples
             generated, attns = model.generate(
@@ -226,10 +229,8 @@ def main():
 
             generated_np = torch.cat((tgt_start, generated), 1).cpu().numpy()
             attn = attns[-1][0].cpu().numpy()
-            n_heads = len(attn)
 
             seq_len = generated_np.shape[1]
-            n_dim = len(encoding["dimensions"])
 
             # Absolute event-event attention
             for h in range(n_heads):
@@ -300,7 +301,7 @@ def main():
                     elif key == "instrument":
                         plt.figure(figsize=(8, 8))
                     elif key == "duration":
-                        plt.figure(figsize=(5, 5))
+                        plt.figure(figsize=(6, 6))
                     plt.imshow(
                         np.nan_to_num(
                             event_attn[d][h]
@@ -349,7 +350,7 @@ def main():
                 elif key == "instrument":
                     plt.figure(figsize=(8, 8))
                 elif key == "duration":
-                    plt.figure(figsize=(5, 5))
+                    plt.figure(figsize=(6, 6))
                 plt.imshow(
                     np.nan_to_num(
                         event_attn[d] / event_attn[d].sum(-1, keepdims=True)
@@ -449,7 +450,7 @@ def main():
                         ),
                     )
                 plt.ylabel("Attention\nhead")
-                plt.yticks(np.arange(4), np.arange(4) + 1)
+                plt.yticks(np.arange(n_heads), np.arange(n_heads) + 1)
                 plt.xlabel(f"{key.capitalize()} difference")
                 plt.tight_layout()
                 plt.savefig(sample_dir / f"{key}_rel.png", bbox_inches="tight")

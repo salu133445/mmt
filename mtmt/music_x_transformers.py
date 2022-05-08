@@ -281,6 +281,8 @@ class MusicAutoregressiveWrapper(nn.Module):
 
         if isinstance(temperature, (float, int)):
             temperature = [temperature] * dim
+        elif len(temperature) == 1:
+            temperature = temperature * dim
         else:
             assert (
                 len(temperature) == dim
@@ -288,6 +290,8 @@ class MusicAutoregressiveWrapper(nn.Module):
 
         if isinstance(filter_logits_fn, str):
             filter_logits_fn = [filter_logits_fn] * dim
+        elif len(filter_logits_fn) == 1:
+            filter_logits_fn = filter_logits_fn * dim
         else:
             assert (
                 len(filter_logits_fn) == dim
@@ -295,6 +299,8 @@ class MusicAutoregressiveWrapper(nn.Module):
 
         if isinstance(filter_thres, (float, int)):
             filter_thres = [filter_thres] * dim
+        elif len(filter_thres) == 1:
+            filter_thres = filter_thres * dim
         else:
             assert (
                 len(filter_thres) == dim
