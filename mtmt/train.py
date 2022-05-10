@@ -436,6 +436,9 @@ def main():
             )
             break
 
+    # Log minimum validation loss
+    logging.info(f"Minimum validation loss achieved: {min_val_loss}")
+
     # Save the optimizer states
     optimizer_filename = args.out_dir / "checkpoints" / f"optimizer_{step}.pt"
     torch.save(optimizer.state_dict(), optimizer_filename)

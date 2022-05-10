@@ -198,6 +198,7 @@ def main():
     # Iterate over
     total_time = 0
     total_notes = 0
+    total_length = 0
     with torch.no_grad():
 
         for _ in tqdm.tqdm(range(args.n_samples), ncols=80):
@@ -225,12 +226,21 @@ def main():
             )
             total_notes += len(notes)
 
-        logging.info(f"Total time: {total_time} sec")
+            # Reconstruct the music
+            music = representation.reconstruct(notes, encoding["resolution"])
+            total_length += music.get_real_end_time()
+
         logging.info(
-            f"Mean time per sample: {total_time  / args.n_samples:.6f} sec"
+            f"Computing time per sample: {total_time  / args.n_samples:.6f} s"
         )
         logging.info(
-            f"Mean time per note: {total_time  / total_notes:.6f} sec"
+            f"Computing time per note: {total_time  / total_notes:.6f} s"
+        )
+        logging.info(
+            f"Length per sample: {total_length  / args.n_samples:.6f} s"
+        )
+        logging.info(
+            f"Number of notes per sample: {total_notes  / args.n_samples:.6f}"
         )
 
 

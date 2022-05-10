@@ -35,13 +35,6 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-o", "--out_dir", type=pathlib.Path, help="output directory"
     )
-    parser.add_argument(
-        "-bs",
-        "--batch_size",
-        default=8,
-        type=int,
-        help="batch size",
-    )
     # Data
     parser.add_argument(
         "--use_csv",
@@ -99,6 +92,9 @@ def evaluate(data, encoding, filename, eval_dir):
 
     # Convert to a MusPy Music object
     music = representation.decode(data, encoding)
+
+    # Trim the music
+    music.trim(music.resolution * 64)
 
     # Save as a MusPy JSON file
     music.save(eval_dir / "json" / f"{filename}.json")
@@ -197,11 +193,6 @@ def main():
 
     # Create the model
     logging.info(f"Creating the model...")
-    disable_absolute_positional_embedding = train_args.get(
-        "disable_absolute_positional_embedding"
-    )
-    if disable_absolute_positional_embedding is None:
-        disable_absolute_positional_embedding = False
     model = music_x_transformers.MusicXTransformer(
         dim=train_args["dim"],
         encoding=encoding,
@@ -250,9 +241,7 @@ def main():
             # ------------------------
 
             # Get output start tokens
-            tgt_start = torch.zeros(
-                (args.batch_size, 1, 6), dtype=torch.long, device=device
-            )
+            tgt_start = torch.zeros((1, 1, 6), dtype=torch.long, device=device)
             tgt_start[:, 0, 0] = sos
 
             # Generate new samples

@@ -36,13 +36,6 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-o", "--out_dir", type=pathlib.Path, help="output directory"
     )
-    parser.add_argument(
-        "-bs",
-        "--batch_size",
-        default=8,
-        type=int,
-        help="batch size",
-    )
     # Data
     parser.add_argument(
         "--use_csv",
@@ -282,9 +275,7 @@ def main():
             # ------------------------
 
             # Get output start tokens
-            tgt_start = torch.zeros(
-                (args.batch_size, 1), dtype=torch.long, device=device
-            )
+            tgt_start = torch.zeros((1, 1), dtype=torch.long, device=device)
             tgt_start[:, 0] = sos
 
             # Generate new samples

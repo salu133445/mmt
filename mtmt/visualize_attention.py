@@ -333,6 +333,8 @@ def main():
                     if key != "type":
                         plt.xlim(0.5, encoding["n_tokens"][d] - 0.5)
                         plt.ylim(encoding["n_tokens"][d] - 0.5, 0.5)
+                    plt.xlabel(key.capitalize())
+                    plt.ylabel(key.capitalize())
                     plt.tight_layout()
                     plt.savefig(
                         sample_dir / f"{key}_head-{h}.png", bbox_inches="tight"
@@ -380,6 +382,8 @@ def main():
                 if key != "type":
                     plt.xlim(0.5, encoding["n_tokens"][d] - 0.5)
                     plt.ylim(encoding["n_tokens"][d] - 0.5, 0.5)
+                plt.xlabel(key.capitalize())
+                plt.ylabel(key.capitalize())
                 plt.tight_layout()
                 plt.savefig(
                     sample_dir / f"{key}_mean.png",
@@ -393,7 +397,7 @@ def main():
             for d, key in enumerate(encoding["dimensions"]):
                 if key not in ("beat", "position", "pitch"):
                     continue
-                plt.figure(figsize=(6, 1.5))
+                plt.figure(figsize=(6, 2))
                 plt.imshow(
                     np.nan_to_num(
                         relative_event_attn[d]
@@ -426,8 +430,8 @@ def main():
                         )[s::4],
                     )
                     plt.xlim(
-                        encoding["n_tokens"][d] - 24,
-                        encoding["n_tokens"][d] + 24,
+                        encoding["n_tokens"][d] - 12,
+                        encoding["n_tokens"][d] + 12,
                     )
                 elif key == "pitch":
                     s = encoding["n_tokens"][d] % 5
