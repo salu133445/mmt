@@ -23,7 +23,7 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-d",
         "--dataset",
-        choices=("sod", "lmd"),
+        choices=("sod", "lmd", "lmd_full"),
         required=True,
         help="dataset key",
     )
@@ -96,7 +96,7 @@ def parse_args(args=None, namespace=None):
     # Training
     parser.add_argument(
         "--steps",
-        default=200000,
+        default=500000,
         type=int,
         help="number of steps",
     )
@@ -155,8 +155,9 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-j",
         "--jobs",
+        default=8,
         type=int,
-        help="number of jobs (deafult to `min(batch_size, 8)`)",
+        help="number of workers for data loading",
     )
     parser.add_argument(
         "-q", "--quiet", action="store_true", help="show warnings only"
@@ -201,8 +202,6 @@ def main():
             args.in_dir = pathlib.Path(f"data/{args.dataset}/processed/notes/")
         if args.out_dir is None:
             args.out_dir = pathlib.Path(f"exp/test_{args.dataset}")
-    if args.jobs is None:
-        args.jobs = min(args.batch_size, 8)
 
     # Make sure the output directory exists
     args.out_dir.mkdir(exist_ok=True)

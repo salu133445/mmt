@@ -24,7 +24,10 @@ def parse_args(args=None, namespace=None):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-d", "--dataset", choices=("sod", "lmd"), help="dataset key"
+        "-d",
+        "--dataset",
+        choices=("sod", "lmd", "lmd_full"),
+        help="dataset key",
     )
     parser.add_argument("-n", "--names", type=pathlib.Path, help="input names")
     parser.add_argument(

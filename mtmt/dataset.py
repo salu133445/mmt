@@ -8,6 +8,7 @@ import sys
 import numpy as np
 import torch
 import torch.utils.data
+import tqdm
 
 import representation
 import utils
@@ -20,7 +21,7 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-d",
         "--dataset",
-        choices=("sod", "lmd"),
+        choices=("sod", "lmd", "lmd_full"),
         required=True,
         help="dataset key",
     )
@@ -228,7 +229,7 @@ def main():
     n_batches = 0
     n_samples = 0
     seq_lens = []
-    for i, batch in enumerate(data_loader):
+    for i, batch in enumerate(tqdm.tqdm(data_loader)):
         n_batches += 1
         n_samples += len(batch["name"])
         seq_lens.extend(int(l) for l in batch["seq_len"])
@@ -243,7 +244,7 @@ def main():
         f"Successfully loaded {n_batches} batches ({n_samples} samples)."
     )
 
-    # Print sequence length statistics
+    # Log sequence length statistics
     logging.info(f"Avg sequence length: {np.mean(seq_lens):2f}")
     logging.info(f"Min sequence length: {min(seq_lens)}")
     logging.info(f"Max sequence length: {max(seq_lens)}")

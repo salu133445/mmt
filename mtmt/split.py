@@ -16,7 +16,7 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-d",
         "--dataset",
-        choices=("sod", "lmd"),
+        choices=("sod", "lmd", "lmd_full"),
         required=True,
         help="dataset key",
     )
@@ -76,7 +76,6 @@ def main():
     logging.info("Loading names...")
     names = utils.load_txt(args.names)
     logging.info(f"Loaded {len(names)} names.")
-    logging.info(f"Loaded {len(set(names))} names.")
 
     # Sample training and test names
     n_valid = int(len(names) * args.ratio_valid)
