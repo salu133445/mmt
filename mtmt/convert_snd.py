@@ -21,21 +21,21 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-n",
         "--names",
-        default="data/sod/original-names.txt",
+        default="data/snd/original-names.txt",
         type=pathlib.Path,
         help="input names",
     )
     parser.add_argument(
         "-i",
         "--in_dir",
-        default="data/sod/SOD/",
+        default="data/snd/SymphonyNet_Dataset/",
         type=pathlib.Path,
         help="input data directory",
     )
     parser.add_argument(
         "-o",
         "--out_dir",
-        default="data/sod/processed/json/",
+        default="data/snd/processed/json/",
         type=pathlib.Path,
         help="output directory",
     )
@@ -80,7 +80,8 @@ def adjust_resolution(music, resolution):
 def convert(name, in_dir, out_dir, resolution, skip_existing):
     """Convert MIDI and MusicXML files into MusPy JSON files."""
     # Get output filename
-    collection, idx, _ = name.split("/")
+    collection, filename = name.split("/")
+    idx = filename.split(".")[0]
     out_name = f"{collection}/{collection}-{idx}"
     out_filename = out_dir / f"{out_name}.json"
 
@@ -145,7 +146,8 @@ def main():
 
     # Get names
     logging.info("Loading names...")
-    names = utils.load_txt(args.names)
+    with open(args.names, encoding="utf8") as f:
+        names = [line.strip() for line in f]
 
     # Iterate over names
     logging.info("Iterating over names...")
@@ -178,6 +180,7 @@ def main():
             for name in names
         )
         converted_names = [result for result in results if result is not None]
+    converted_names = sorted(set(converted_names))
     logging.info(
         f"Converted {len(converted_names)} out of {len(names)} files."
     )

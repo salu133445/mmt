@@ -88,7 +88,7 @@ def convert(name, in_dir, out_dir, resolution, skip_existing):
         return
 
     # Read the MIDI file
-    music = muspy.read(in_dir / name[0] / f"{name}")
+    music = muspy.read(in_dir / name[0] / name)
 
     # Adjust the resolution
     adjust_resolution(music, resolution)

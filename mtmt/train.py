@@ -23,7 +23,7 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-d",
         "--dataset",
-        choices=("sod", "lmd", "lmd_full"),
+        choices=("sod", "lmd", "lmd_full", "snd"),
         required=True,
         help="dataset key",
     )
@@ -155,7 +155,7 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-j",
         "--jobs",
-        default=8,
+        default=4,
         type=int,
         help="number of workers for data loading",
     )

@@ -26,7 +26,7 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-d",
         "--dataset",
-        choices=("sod", "lmd", "lmd_full"),
+        choices=("sod", "lmd", "lmd_full", "snd"),
         help="dataset key",
     )
     parser.add_argument("-n", "--names", type=pathlib.Path, help="input names")

@@ -24,7 +24,7 @@ def parse_args(args=None, namespace=None):
     parser.add_argument(
         "-d",
         "--dataset",
-        choices=("sod", "lmd", "lmd_full"),
+        choices=("sod", "lmd", "lmd_full", "snd"),
         required=True,
         help="dataset key",
     )
@@ -34,6 +34,12 @@ def parse_args(args=None, namespace=None):
     )
     parser.add_argument(
         "-o", "--out_dir", type=pathlib.Path, help="output directory"
+    )
+    parser.add_argument(
+        "-ns",
+        "--n_samples",
+        type=int,
+        help="number of samples to evaluate",
     )
     # Data
     parser.add_argument(
@@ -223,9 +229,15 @@ def main():
 
     results = defaultdict(list)
 
+    n_samples = len(test_loader) if args.n_samples is None else args.n_samples
+    test_iter = iter(test_loader)
+
     # Iterate over the dataset
     with torch.no_grad():
-        for idx, batch in enumerate(tqdm.tqdm(test_loader, ncols=80)):
+        for idx in enumerate(tqdm.tqdm(range(n_samples), ncols=120)):
+
+            batch = next(test_iter)
+
             # ------------
             # Ground truth
             # ------------

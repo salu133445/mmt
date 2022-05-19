@@ -397,7 +397,7 @@ def extract_notes(music, resolution):
     # Extract notes
     notes = []
     for track in music:
-        if track.program not in KNOWN_PROGRAMS:
+        if track.is_drum or track.program not in KNOWN_PROGRAMS:
             continue
         for note in track:
             beat, position = divmod(note.time, resolution)
