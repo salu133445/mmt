@@ -60,3 +60,39 @@ python split.py -d sod
 ```
 
 ## Training
+
+Train a Multitrack Music Transformer model.
+
+- Absolute positional embedding (APE):
+
+  `python mtmt/train.py -d sod -o exp/sod/ape -g 0`
+
+- Relative positional embedding (RPE):
+
+  `python mtmt/train.py -d sod -o exp/sod/rpe --no-abs_pos_emb --rel_pos_emb -g 0`
+
+- No positional embedding (NPE):
+
+  `python mtmt/train.py -d sod -o exp/sod/npe --no-abs_pos_emb --no-rel_pos_emb -g 0`
+
+> Please run `python mtmt/train.py -h` to see additional options.
+
+## Evaluation
+
+Evaluate the trained model.
+
+```sh
+python mtmt/evaluate.py -d sod -o exp/sod/ape -ns 100 -g 0
+```
+
+> Please run `python mtmt/evaluate.py -h` to see additional options.
+
+## Generation (inference)
+
+Generate new samples using a trained model.
+
+```sh
+python mtmt/generate.py -d sod -o exp/sod/ape -g 0
+```
+
+> Please run `python mtmt/generate.py -h` to see additional options.
