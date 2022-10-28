@@ -1,5 +1,5 @@
 @import "rouge-base16-dark";
-@import url('https://fonts.googleapis.com/css?family=Lato:300italic,700italic,300,700');
+@import url('https://fonts.googleapis.com/css?family=Lato:400italic,700italic,400,700');
 
 html {
   background:#6C7989;
@@ -12,13 +12,13 @@ body {
   margin:0;
   font:14px/1.5 Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
   color:#555;
-  font-weight:300;
+  font-weight:400;
   background:url('../images/checker.png') fixed;
   min-height: calc(100% - 100px);
 }
 
 .wrapper {
-  width:740px;
+  width:1080px;
   margin:0 auto;
   background:#DEDEDE;
   border-radius: 8px;
@@ -295,6 +295,34 @@ footer {
   p + p {
     float:right;
   }
+}
+
+// Video player
+.video-container {
+  display: block;
+  overflow: hidden;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 20px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.video-inner-container {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25%;
+  border-radius: 5px;
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 @media print, screen and (max-width: 740px) {
