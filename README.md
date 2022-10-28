@@ -14,12 +14,14 @@ conda env create -f environment.yml
 
 ### Download the datasets
 
-- [Lakh MIDI Dataset (LMD)](https://qsdfo.github.io/LOP/database.html)
-  - Download in command line directly via `wget http://hog.ee.columbia.edu/craffel/lmd/lmd_full.tar.gz`
-- [Symbolic orchestral database (SOD)](https://qsdfo.github.io/LOP/database.html)
-  - Download in command line directly via `wget https://qsdfo.github.io/LOP/database/SOD.zip`
-- [SymphonyNet Dataset](https://symphonynet.github.io/)
-  - Download in command line directly via `gdown https://drive.google.com/u/0/uc?id=1j9Pvtzaq8k_QIPs8e2ikvCR-BusPluTb&export=download`
+Please download the [Symbolic orchestral database (SOD)](https://qsdfo.github.io/LOP/database.html). You may also download in command line directly by `wget https://qsdfo.github.io/LOP/database/SOD.zip`.
+
+> We also support the following two datasets:
+>
+> - [Lakh MIDI Dataset (LMD)](https://qsdfo.github.io/LOP/database.html)
+>   - Download in command line directly via `wget http://hog.ee.columbia.edu/craffel/lmd/lmd_full.tar.gz`
+> - [SymphonyNet Dataset](https://symphonynet.github.io/)
+>   - Download in command line directly via `gdown https://drive.google.com/u/0/uc?id=1j9Pvtzaq8k_QIPs8e2ikvCR-BusPluTb&export=download`
 
 ### Prepare the name list
 
@@ -48,8 +50,6 @@ Extract a list of notes from the MusPy JSON files.
 ```sh
 python extract.py -d sod
 ```
-
-> Note: Pass the option `-d lmd` instead for the LMD dataset.
 
 ### Split training/validation/test sets
 
