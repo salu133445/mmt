@@ -4,6 +4,7 @@ import pathlib
 import pprint
 import sys
 
+import matplotlib.colors
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -205,8 +206,11 @@ def main():
     n_dim = len(encoding["dimensions"])
     n_heads = train_args["heads"]
     event_attn = [np.zeros((n_heads, n, n)) for n in encoding["n_tokens"]]
-    relative_event_attn = [
+    rel_event_attn = [
         np.zeros((n_heads, 2 * n)) for n in encoding["n_tokens"]
+    ]
+    rel_random_attn = [
+        np.zeros((1, 2 * n)) for n in encoding["n_tokens"]
     ]
 
     # Iterate over the dataset
@@ -261,12 +265,19 @@ def main():
                                 or generated_np[0, k, d] == 0
                             ):
                                 continue
-                            relative_event_attn[d][
+                            rel_event_attn[d][
                                 h,
                                 generated_np[0, k_, d]
                                 - generated_np[0, k, d]
                                 + n,
                             ] += attn[h, k, k_]
+                            if h == 0:
+                                rel_random_attn[d][
+                                    0,
+                                    generated_np[0, k_, d]
+                                    - generated_np[0, k, d]
+                                    + n,
+                                ] += 1
 
         ticklabels = [
             [
@@ -403,8 +414,8 @@ def main():
                 plt.figure(figsize=(6, 2))
                 plt.imshow(
                     np.nan_to_num(
-                        relative_event_attn[d]
-                        / relative_event_attn[d].sum(-1, keepdims=True)
+                        rel_event_attn[d]
+                        / rel_event_attn[d].sum(-1, keepdims=True)
                     ),
                     cmap="Blues",
                     aspect="auto",
@@ -464,6 +475,246 @@ def main():
                 plt.savefig(sample_dir / f"{key}_rel.pdf", bbox_inches="tight")
                 plt.close()
 
+            for d, key in enumerate(encoding["dimensions"]):
+                if key not in ("beat", "position", "pitch"):
+                    continue
+                plt.figure(figsize=(6, 2))
+                plt.imshow(
+                    np.concatenate(
+                        (
+                            np.nan_to_num(
+                                rel_event_attn[d]
+                                / rel_event_attn[d].sum(-1, keepdims=True)
+                            ),
+                            np.nan_to_num(
+                                rel_random_attn[d]
+                                / rel_random_attn[d].sum(-1, keepdims=True)
+                            )
+                        )
+                    ),
+                    cmap="Blues",
+                    aspect="auto",
+                    interpolation="none",
+                )
+                if key == "beat":
+                    s = encoding["n_tokens"][d] % 4
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2)[s::4],
+                        np.arange(
+                            -encoding["n_tokens"][d],
+                            encoding["n_tokens"][d],
+                        )[s::4],
+                    )
+                    plt.xlim(
+                        encoding["n_tokens"][d] - 40.5,
+                        encoding["n_tokens"][d] + 4.5,
+                    )
+                elif key == "position":
+                    s = encoding["n_tokens"][d] % 4
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2)[s::4],
+                        np.arange(
+                            -encoding["n_tokens"][d],
+                            encoding["n_tokens"][d],
+                        )[s::4],
+                    )
+                    plt.xlim(
+                        encoding["n_tokens"][d] - 12,
+                        encoding["n_tokens"][d] + 12,
+                    )
+                elif key == "pitch":
+                    s = encoding["n_tokens"][d] % 5
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2)[s::5],
+                        np.arange(
+                            -encoding["n_tokens"][d],
+                            encoding["n_tokens"][d],
+                        )[s::5],
+                    )
+                    plt.xlim(
+                        encoding["n_tokens"][d] - 25.5,
+                        encoding["n_tokens"][d] + 25.5,
+                    )
+                else:
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2),
+                        np.arange(
+                            -encoding["n_tokens"][d], encoding["n_tokens"][d]
+                        ),
+                    )
+                plt.ylabel("Attention\nhead")
+                plt.yticks(
+                    np.arange(n_heads + 1),
+                    [str(i) for i in range(1, n_heads + 1)] + ["*"]
+                )
+                plt.xlabel(f"{key.capitalize()} difference")
+                plt.tight_layout()
+                plt.savefig(
+                    sample_dir / f"{key}_rel2.png",
+                    bbox_inches="tight"
+                )
+                plt.savefig(
+                    sample_dir / f"{key}_rel2.pdf",
+                    bbox_inches="tight"
+                )
+                plt.close()
+
+
+            for d, key in enumerate(encoding["dimensions"]):
+                if key not in ("beat", "position", "pitch"):
+                    continue
+                plt.figure(figsize=(6, 2))
+                plt.imshow(
+                    np.nan_to_num(
+                        rel_event_attn[d]
+                        / rel_event_attn[d].sum(-1, keepdims=True)
+                    )
+                    - np.nan_to_num(
+                        rel_random_attn[d]
+                        / rel_random_attn[d].sum(-1, keepdims=True)
+                    ),
+                    norm=matplotlib.colors.CenteredNorm(),
+                    cmap="bwr",
+                    aspect="auto",
+                    interpolation="none",
+                )
+                if key == "beat":
+                    s = encoding["n_tokens"][d] % 4
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2)[s::4],
+                        np.arange(
+                            -encoding["n_tokens"][d],
+                            encoding["n_tokens"][d],
+                        )[s::4],
+                    )
+                    plt.xlim(
+                        encoding["n_tokens"][d] - 40.5,
+                        encoding["n_tokens"][d] + 4.5,
+                    )
+                elif key == "position":
+                    s = encoding["n_tokens"][d] % 4
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2)[s::4],
+                        np.arange(
+                            -encoding["n_tokens"][d],
+                            encoding["n_tokens"][d],
+                        )[s::4],
+                    )
+                    plt.xlim(
+                        encoding["n_tokens"][d] - 12,
+                        encoding["n_tokens"][d] + 12,
+                    )
+                elif key == "pitch":
+                    s = encoding["n_tokens"][d] % 5
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2)[s::5],
+                        np.arange(
+                            -encoding["n_tokens"][d],
+                            encoding["n_tokens"][d],
+                        )[s::5],
+                    )
+                    plt.xlim(
+                        encoding["n_tokens"][d] - 25.5,
+                        encoding["n_tokens"][d] + 25.5,
+                    )
+                else:
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2),
+                        np.arange(
+                            -encoding["n_tokens"][d], encoding["n_tokens"][d]
+                        ),
+                    )
+                plt.ylabel("Attention\nhead")
+                plt.yticks(np.arange(n_heads), np.arange(n_heads) + 1)
+                plt.xlabel(f"{key.capitalize()} difference")
+                plt.tight_layout()
+                plt.savefig(
+                    sample_dir / f"{key}_rel3.png",
+                    bbox_inches="tight"
+                )
+                plt.savefig(
+                    sample_dir / f"{key}_rel3.pdf",
+                    bbox_inches="tight"
+                )
+                plt.close()
+
+            for d, key in enumerate(encoding["dimensions"]):
+                if key not in ("beat", "position", "pitch"):
+                    continue
+                plt.figure(figsize=(6, 2))
+                plt.imshow(
+                    np.nan_to_num(
+                        rel_event_attn[d]
+                        / rel_event_attn[d].sum(-1, keepdims=True)
+                    )
+                    / np.nan_to_num(
+                        rel_random_attn[d]
+                        / rel_random_attn[d].sum(-1, keepdims=True)
+                    ),
+                    norm=matplotlib.colors.CenteredNorm(1),
+                    cmap="bwr",
+                    aspect="auto",
+                    interpolation="none",
+                )
+                if key == "beat":
+                    s = encoding["n_tokens"][d] % 4
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2)[s::4],
+                        np.arange(
+                            -encoding["n_tokens"][d],
+                            encoding["n_tokens"][d],
+                        )[s::4],
+                    )
+                    plt.xlim(
+                        encoding["n_tokens"][d] - 40.5,
+                        encoding["n_tokens"][d] + 4.5,
+                    )
+                elif key == "position":
+                    s = encoding["n_tokens"][d] % 4
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2)[s::4],
+                        np.arange(
+                            -encoding["n_tokens"][d],
+                            encoding["n_tokens"][d],
+                        )[s::4],
+                    )
+                    plt.xlim(
+                        encoding["n_tokens"][d] - 12,
+                        encoding["n_tokens"][d] + 12,
+                    )
+                elif key == "pitch":
+                    s = encoding["n_tokens"][d] % 5
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2)[s::5],
+                        np.arange(
+                            -encoding["n_tokens"][d],
+                            encoding["n_tokens"][d],
+                        )[s::5],
+                    )
+                    plt.xlim(
+                        encoding["n_tokens"][d] - 25.5,
+                        encoding["n_tokens"][d] + 25.5,
+                    )
+                else:
+                    plt.xticks(
+                        np.arange(encoding["n_tokens"][d] * 2),
+                        np.arange(
+                            -encoding["n_tokens"][d], encoding["n_tokens"][d]
+                        ),
+                    )
+                plt.ylabel("Attention\nhead")
+                plt.yticks(np.arange(n_heads), np.arange(n_heads) + 1)
+                plt.xlabel(f"{key.capitalize()} difference")
+                plt.tight_layout()
+                plt.savefig(
+                    sample_dir / f"{key}_rel4.png",
+                    bbox_inches="tight"
+                )
+                plt.savefig(
+                    sample_dir / f"{key}_rel4.pdf",
+                    bbox_inches="tight"
+                )
+                plt.close()
 
 if __name__ == "__main__":
     main()
