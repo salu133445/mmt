@@ -96,7 +96,7 @@ def parse_args(args=None, namespace=None):
     # Training
     parser.add_argument(
         "--steps",
-        default=500000,
+        default=200000,
         type=int,
         help="number of steps",
     )
