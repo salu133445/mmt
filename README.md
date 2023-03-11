@@ -65,34 +65,45 @@ Train a Multitrack Music Transformer model.
 
 - Absolute positional embedding (APE):
 
-  `python mtmt/train.py -d sod -o exp/sod/ape -g 0`
+  `python mmt/train.py -d sod -o exp/sod/ape -g 0`
 
 - Relative positional embedding (RPE):
 
-  `python mtmt/train.py -d sod -o exp/sod/rpe --no-abs_pos_emb --rel_pos_emb -g 0`
+  `python mmt/train.py -d sod -o exp/sod/rpe --no-abs_pos_emb --rel_pos_emb -g 0`
 
 - No positional embedding (NPE):
 
-  `python mtmt/train.py -d sod -o exp/sod/npe --no-abs_pos_emb --no-rel_pos_emb -g 0`
+  `python mmt/train.py -d sod -o exp/sod/npe --no-abs_pos_emb --no-rel_pos_emb -g 0`
 
-> Please run `python mtmt/train.py -h` to see additional options.
+> Please run `python mmt/train.py -h` to see additional options.
 
 ## Evaluation
 
 Evaluate the trained model.
 
 ```sh
-python mtmt/evaluate.py -d sod -o exp/sod/ape -ns 100 -g 0
+python mmt/evaluate.py -d sod -o exp/sod/ape -ns 100 -g 0
 ```
 
-> Please run `python mtmt/evaluate.py -h` to see additional options.
+> Please run `python mmt/evaluate.py -h` to see additional options.
 
 ## Generation (inference)
 
 Generate new samples using a trained model.
 
 ```sh
-python mtmt/generate.py -d sod -o exp/sod/ape -g 0
+python mmt/generate.py -d sod -o exp/sod/ape -g 0
 ```
 
-> Please run `python mtmt/generate.py -h` to see additional options.
+> Please run `python mmt/generate.py -h` to see additional options.
+
+## Citation
+
+Please cite the following paper if you use the code provided in this repository.
+
+Hao-Wen Dong, Ke Chen, Shlomo Dubnov, Julian McAuley and Taylor Berg-Kirkpatrick, "Multitrack Music Transformer: Learning Long-Term Dependencies in Music with Diverse Instruments," _Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)_, 2023.
+<br>
+[[homepage](https://salu133445.github.io/mmt/)]
+[[paper](https://arxiv.org/pdf/2207.06983.pdf)]
+[[code](https://github.com/salu133445/mmt)]
+[[reviews](https://salu133445.github.io/pdf/mmt-icassp2023-reviews.pdf)]
