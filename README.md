@@ -17,6 +17,7 @@ _Proceedings of the IEEE International Conference on Acoustics, Speech and Signa
 - [Training](#training)
 - [Evaluation](#evaluation)
 - [Generation (inference)](#generation-inference)
+- [Pretrained models](#pretrained-models)
 - [Citation](#citation)
 
 ## Prerequisites
