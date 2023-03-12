@@ -30,6 +30,9 @@ _Proceedings of the IEEE International Conference on Acoustics, Speech and Signa
 - __MMM__: A decoder-only transformer using the MultiTrack representation proposed by Ens and Pasquier (2020)[^ens2020]
 - __REMI+__: A decoder-only transformer using the REMI+ representation proposed by von Rütte et al. (2022)[^vonrutte2022]
 
+[^ens2020]: Jeff Ens and Philippe Pasquier, “MMM: Exploring conditional multi-track music generation with the transformer,” arXiv preprint arXiv:2008.06048, 2020.
+[^vonrutte2022]: Dimitri von Rütte, Luca Biggio, Yannic Kilcher, and Thomas Hofmann, “FIGARO: Generating symbolic music with fine-grained artistic control,” arXiv preprint arXiv:2201.10936, 2022.
+
 | Model | Instrument control | Compound tokens | Average sample length<br>(second) | Inference speed<br>(notes per second) |
 |-|:-:|:-:|:-:|:-:|
 | MMT (ours) | __✓__ | __✓__ | __100.42__ | __11.79__ |
@@ -37,8 +40,7 @@ _Proceedings of the IEEE International Conference on Acoustics, Speech and Signa
 | REMI+ | ✕ | ✕ | 28.69 | 3.58 |
 {:style="width: 75%; margin-left: auto; margin-right: auto;"}
 
-[^ens2020]: Jeff Ens and Philippe Pasquier, “MMM: Exploring conditional multi-track music generation with the transformer,” arXiv preprint arXiv:2008.06048, 2020.
-[^vonrutte2022]: Dimitri von Rütte, Luca Biggio, Yannic Kilcher, and Thomas Hofmann, “FIGARO: Generating symbolic music with fine-grained artistic control,” arXiv preprint arXiv:2201.10936, 2022.
+> __Note__: All the samples are generated in single pass through the model using a sequence legnth of 1024. Thus, the generated music is usually shorter for a more complex ensemble than a simple ensemble.
 
 ---
 
@@ -62,8 +64,6 @@ _Proceedings of the IEEE International Conference on Acoustics, Speech and Signa
 | __Ensemble__: trumpet, trombone | {% include audio_player.html filename="audio/sod/best/33_instrument-informed.mp3" %} |
 | __Ensemble__: church-organ, viola, contrabass, strings, voices, horn, oboe | {% include audio_player.html filename="audio/sod/best/10_instrument-informed.mp3" %} |
 {:style="width: 80%; margin-left: auto; margin-right: auto;"}
-
-> __Note__: These samples are generated in single pass through the model using a sequence legnth of 1024. Thus, the generated music is usually shorter for a more complex ensemble than a simple ensemble.
 
 ### Best 4-beat continuation samples {#best-4-beat-continuation}
 
