@@ -5,8 +5,8 @@ __Mutlitrack Music Transformer__{:.larger}\\
 [Julian McAuley](https://cseweb.ucsd.edu/~jmcauley/) &emsp;
 [Taylor Berg-Kirkpatrick](https://cseweb.ucsd.edu/~tberg/)\\
 _Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)_, 2023\\
+{% include icon_link.html text="homepage" icon=site.icons.homepage href="https://salu133445.github.io/mmt/" %} &emsp;
 {% include icon_link.html text="paper" icon=site.icons.paper href="https://arxiv.org/pdf/2207.06983.pdf" %} &emsp;
-{% include icon_link.html text="demo" icon=site.icons.demo href="https://salu133445.github.io/mmt/" %} &emsp;
 {% include icon_link.html text="code" icon=site.icons.code href="https://github.com/salu133445/mmt" %} &emsp;
 {% include icon_link.html text="reviews" icon=site.icons.reviews href="https://salu133445.github.io/pdf/mmt-icassp2023-reviews.pdf" %}
 {:.center}
