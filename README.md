@@ -1,8 +1,25 @@
 # Multitrack Music Transformer
 
-## Prerequisites
+This repository contains the official implementation of "Multitrack Music Transformer" (ICASSP 2023).
 
-### Set up development environment
+__Multitrack Music Transformer__<br>
+Hao-Wen Dong, Ke Chen, Shlomo Dubnov, Julian McAuley and Taylor Berg-Kirkpatrick<br>
+_Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)_, 2023.<br>
+[[homepage](https://salu133445.github.io/mmt/)]
+[[paper](https://arxiv.org/pdf/2207.06983.pdf)]
+[[code](https://github.com/salu133445/mmt)]
+[[reviews](https://salu133445.github.io/pdf/mmt-icassp2023-reviews.pdf)]
+
+## Content
+
+- [Prerequisites](#prerequisites)
+- [Preprocessing](#preprocessing)
+- [Training](#training)
+- [Evaluation](#evaluation)
+- [Generation (inference)](#generation-inference)
+- [Citation](#citation)
+
+## Prerequisites
 
 We recommend using Conda. You can create the environment with the following command.
 
@@ -14,14 +31,25 @@ conda env create -f environment.yml
 
 ### Download the datasets
 
-Please download the [Symbolic orchestral database (SOD)](https://qsdfo.github.io/LOP/database.html). You may also download in command line directly by `wget https://qsdfo.github.io/LOP/database/SOD.zip`.
+Please download the [Symbolic orchestral database (SOD)](https://qsdfo.github.io/LOP/database.html). You may download it via command line as follows.
 
-> We also support the following two datasets:
->
-> - [Lakh MIDI Dataset (LMD)](https://qsdfo.github.io/LOP/database.html)
->   - Download in command line directly via `wget http://hog.ee.columbia.edu/craffel/lmd/lmd_full.tar.gz`
-> - [SymphonyNet Dataset](https://symphonynet.github.io/)
->   - Download in command line directly via `gdown https://drive.google.com/u/0/uc?id=1j9Pvtzaq8k_QIPs8e2ikvCR-BusPluTb&export=download`
+```sh
+wget https://qsdfo.github.io/LOP/database/SOD.zip
+```
+
+We also support the following two datasets:
+
+- [Lakh MIDI Dataset (LMD)](https://qsdfo.github.io/LOP/database.html):
+
+  ```sh
+  wget http://hog.ee.columbia.edu/craffel/lmd/lmd_full.tar.gz
+  ```
+
+- [SymphonyNet Dataset](https://symphonynet.github.io/):
+
+  ```sh
+  gdown https://drive.google.com/u/0/uc?id=1j9Pvtzaq8k_QIPs8e2ikvCR-BusPluTb&export=download
+  ```
 
 ### Prepare the name list
 
@@ -41,7 +69,7 @@ Convert the MIDI and MusicXML files into MusPy files for processing.
 python convert_sod.py
 ```
 
-> Note: You may enable multiprocessing via the `-j {JOBS}` option. For example, `python convert_sod.py -j 10` will run the script with 10 jobs.
+> Note: You may enable multiprocessing with the `-j` option, for example, `python convert_sod.py -j 10` for 10 parallel jobs.
 
 ### Extract the note list
 
@@ -75,8 +103,6 @@ Train a Multitrack Music Transformer model.
 
   `python mmt/train.py -d sod -o exp/sod/npe --no-abs_pos_emb --no-rel_pos_emb -g 0`
 
-> Please run `python mmt/train.py -h` to see additional options.
-
 ## Evaluation
 
 Evaluate the trained model.
@@ -84,8 +110,6 @@ Evaluate the trained model.
 ```sh
 python mmt/evaluate.py -d sod -o exp/sod/ape -ns 100 -g 0
 ```
-
-> Please run `python mmt/evaluate.py -h` to see additional options.
 
 ## Generation (inference)
 
@@ -95,15 +119,25 @@ Generate new samples using a trained model.
 python mmt/generate.py -d sod -o exp/sod/ape -g 0
 ```
 
-> Please run `python mmt/generate.py -h` to see additional options.
+## Pretrained models
+
+The pretrained models can be found [here](https://drive.google.com/drive/folders/1HoKfghXOmiqi028oc_Wv0m2IlLdcJglQ?usp=share_link). You may download them via command line as follows.
+
+```sh
+gdown --id 1HoKfghXOmiqi028oc_Wv0m2IlLdcJglQ --folder
+```
 
 ## Citation
 
 Please cite the following paper if you use the code provided in this repository.
 
-Hao-Wen Dong, Ke Chen, Shlomo Dubnov, Julian McAuley and Taylor Berg-Kirkpatrick, "Multitrack Music Transformer: Learning Long-Term Dependencies in Music with Diverse Instruments," _Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)_, 2023.
-<br>
-[[homepage](https://salu133445.github.io/mmt/)]
-[[paper](https://arxiv.org/pdf/2207.06983.pdf)]
-[[code](https://github.com/salu133445/mmt)]
-[[reviews](https://salu133445.github.io/pdf/mmt-icassp2023-reviews.pdf)]
+Hao-Wen Dong, Ke Chen, Shlomo Dubnov, Julian McAuley and Taylor Berg-Kirkpatrick, "Multitrack Music Transformer," _Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)_, 2023.
+
+```bibtex
+@inproceedings{dong2023mmt,
+    author = {Hao-Wen Dong and Ke Chen and Shlomo Dubnov and Julian McAuley and Taylor Berg-Kirkpatrick},
+    title = {Multitrack Music Transformer},
+    booktitle = {Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
+    year = 2023,
+}
+```
