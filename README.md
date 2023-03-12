@@ -4,7 +4,7 @@ This repository contains the official implementation of "Multitrack Music Transf
 
 __Multitrack Music Transformer__<br>
 Hao-Wen Dong, Ke Chen, Shlomo Dubnov, Julian McAuley and Taylor Berg-Kirkpatrick<br>
-_Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)_, 2023.<br>
+_Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)_, 2023<br>
 [[homepage](https://salu133445.github.io/mmt/)]
 [[paper](https://arxiv.org/pdf/2207.06983.pdf)]
 [[code](https://github.com/salu133445/mmt)]
