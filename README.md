@@ -1,4 +1,4 @@
-## Setting up development environment
+# Setting up development environment
 
 1. Create the Conda environment: `conda env create -f environment.yml`
 2. Install Jekyll: `gem install jekyll`
