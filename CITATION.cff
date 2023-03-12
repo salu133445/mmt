@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+authors:
+  - family-names: Dong
+    given-names: Hao-Wen
+title: MMT
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Dong
+      given-names: Hao-Wen
+    - family-names: Chen
+      given-names: Ke
+    - family-names: Dubnov
+      given-names: Shlomo
+    - family-names: McAuley
+      given-names: Julian
+    - family-names: Berg-Kirkpatrick
+      given-names: Taylor
+  title: Multitrack Music Transformer
+  journal: Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)
+  year: 2023
+date-released: 2022-04-21
+license: MIT
+url: https://salu133445.github.io/mmt/
+repository-code: https://github.com/salu133445/mmt
