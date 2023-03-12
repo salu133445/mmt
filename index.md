@@ -1,4 +1,15 @@
-# Audio Samples for Multitrack Music Transformer
+__Mutlitrack Music Transformer__\\
+Hao-Wen Dong, Ke Chen, Shlomo Dubnov, Julian McAuley and Taylor Berg-Kirkpatrick\\
+_Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)_, 2023\\
+{% include icon_link.html text="homepage" icon=site.icons.homepage href="https://salu133445.github.io/mmt/" %}&ensp;
+{% include icon_link.html text="paper" icon=site.icons.paper href="https://arxiv.org/pdf/2207.06983.pdf" %}&ensp;
+{% include icon_link.html text="code" icon=site.icons.code href="https://github.com/salu133445/mmt" %}&ensp;
+{% include icon_link.html text="reviews" icon=site.icons.reviews href="https://salu133445.github.io/pdf/mmt-icassp2023-reviews.pdf" %}
+{:.center}
+
+{% include video_player.html id="7g0F0lMs18Y" %}
+
+---
 
 ## Content
 
@@ -33,10 +44,6 @@
 
 ## Best samples {#best-samples}
 
-Here are some of the best samples we found.
-
-{% include video_player.html id="7g0F0lMs18Y" %}
-
 ### Best unconditioned generation samples {#best-unconditional}
 
 > __Settings__: Only a `start-of-song' event is provided to the model. The model generates the instrument list and subsequently the note sequence.
@@ -55,6 +62,8 @@ Here are some of the best samples we found.
 | __Ensemble__: trumpet, trombone | {% include audio_player.html filename="audio/sod/best/33_instrument-informed.mp3" %} |
 | __Ensemble__: church-organ, viola, contrabass, strings, voices, horn, oboe | {% include audio_player.html filename="audio/sod/best/10_instrument-informed.mp3" %} |
 {:style="width: 80%; margin-left: auto; margin-right: auto;"}
+
+> __Note__: These samples are generated in single pass through the model using a sequence legnth of 1024. Thus, the generated music is usually shorter for a more complex ensemble than a simple ensemble.
 
 ### Best 4-beat continuation samples {#best-4-beat-continuation}
 

@@ -1,4 +1,14 @@
 theme: jekyll-theme-modernist
 title: Multitrack Music Transformer
-description: Demo for the Multitrack Music Transformer paper
+description: ICASSP 2023
 show_downloads: false
+icons:
+  homepage: fa-solid fa-globe-asia
+  video: fa-brands fa-youtube
+  paper: fa-solid fa-file-pdf
+  slides: fa-solid fa-file-pdf
+  poster: fa-solid fa-file-pdf
+  arxiv: fa-solid fa-archive
+  code: fa-brands fa-github
+  documentation: fa-solid fa-book
+  reviews: fa-solid fa-comments
