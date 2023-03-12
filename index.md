@@ -1,10 +1,11 @@
-__Mutlitrack Music Transformer__{:.larger}\\
 [Hao-Wen Dong](https://salu133445.github.io/) &emsp;
 [Ke Chen](https://www.knutchen.com/) &emsp;
 [Shlomo Dubnov](http://dub.ucsd.edu/) &emsp;
 [Julian McAuley](https://cseweb.ucsd.edu/~jmcauley/) &emsp;
 [Taylor Berg-Kirkpatrick](https://cseweb.ucsd.edu/~tberg/)\\
-_Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)_, 2023\\
+University of California San Diego
+{:.center}
+
 {% include icon_link.html text="homepage" icon=site.icons.homepage href="https://salu133445.github.io/mmt/" %} &emsp;
 {% include icon_link.html text="paper" icon=site.icons.paper href="https://arxiv.org/pdf/2207.06983.pdf" %} &emsp;
 {% include icon_link.html text="code" icon=site.icons.code href="https://github.com/salu133445/mmt" %} &emsp;
@@ -17,6 +18,7 @@ _Proceedings of the IEEE International Conference on Acoustics, Speech and Signa
 
 ## Content
 
+- [Summary of the compared models](#summary)
 - [Best samples](#best-samples)
   - [Best unconditioned generation samples](#best-unconditional)
   - [Best instrument-informed generation samples](#best-instrument-informed)
@@ -25,10 +27,11 @@ _Proceedings of the IEEE International Conference on Acoustics, Speech and Signa
 - [Examples of instrument-informed generation](#instrument-informed)
 - [Examples of 4-beat continuation](#continuation-4-beat)
 - [Examples of 16-beat continuation](#continuation-16-beat)
+- [Citation](#citation)
 
 ---
 
-## Summary of the compared models
+## Summary of the compared models {#summary}
 
 - __MMT__: Our proposed Multitrack Music Transformer model
 - __MMM__: A decoder-only transformer using the MultiTrack representation proposed by Ens and Pasquier (2020)[^ens2020]
@@ -122,5 +125,20 @@ _Proceedings of the IEEE International Conference on Acoustics, Speech and Signa
 |:-:|:-:|:-:|:-:|
 | MMT (ours) | {% include audio_player.html filename="audio/sod/ape/0_16-beat-continuation.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/ape/1_16-beat-continuation.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/ape/2_16-beat-continuation.mp3" style="width:250px;" %} |
 | Ground truth | {% include audio_player.html filename="audio/sod/truth/0_truth.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/truth/1_truth.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/truth/2_truth.mp3" style="width:250px;" %} |
+
+---
+
+## Citation
+
+> Hao-Wen Dong, Ke Chen, Shlomo Dubnov, Julian McAuley and Taylor Berg-Kirkpatrick, "Multitrack Music Transformer," _Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)_, 2023.
+
+```bibtex
+@inproceedings{dong2023mmt,
+    author = {Hao-Wen Dong and Ke Chen and Shlomo Dubnov and Julian McAuley and Taylor Berg-Kirkpatrick},
+    title = {Multitrack Music Transformer},
+    booktitle = {Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
+    year = 2023,
+}
+```
 
 ---
