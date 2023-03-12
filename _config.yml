@@ -12,3 +12,5 @@ icons:
   code: fa-brands fa-github
   documentation: fa-solid fa-book
   reviews: fa-solid fa-comments
+  demo: fa-solid fa-globe-asia
+  link: fa-solid fa-arrow-up-right-from-square
