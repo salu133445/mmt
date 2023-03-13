@@ -43,12 +43,15 @@ University of California San Diego
 [^ens2020]: Jeff Ens and Philippe Pasquier, “MMM: Exploring conditional multi-track music generation with the transformer,” arXiv preprint arXiv:2008.06048, 2020.
 [^vonrutte2022]: Dimitri von Rütte, Luca Biggio, Yannic Kilcher, and Thomas Hofmann, “FIGARO: Generating symbolic music with fine-grained artistic control,” arXiv preprint arXiv:2201.10936, 2022.
 
-| Model | Instrument control | Compound tokens | Average sample length<br>(second) | Inference speed<br>(notes per second) |
+<div class="table-wrapper" markdown="block">
+
+| Model | Instrument control | Compound tokens | Average sample length (second) | Inference speed (notes per second) |
 |-|:-:|:-:|:-:|:-:|
 | MMT (ours) | __✓__ | __✓__ | __100.42__ | __11.79__ |
 | MMM | ✕ | ✕ | 38.69 | 5.66 |
 | REMI+ | ✕ | ✕ | 28.69 | 3.58 |
-{:style="width: 75%; margin-left: auto; margin-right: auto;"}
+
+</div>
 
 > __Note__: All the samples are generated in single pass through the model using a sequence legnth of 1024. Thus, the generated music is usually shorter for a more complex ensemble than a simple ensemble.
 
@@ -60,28 +63,36 @@ University of California San Diego
 
 > __Settings__: Only a `start-of-song' event is provided to the model. The model generates the instrument list and subsequently the note sequence.
 
-|-|-|-|-|
+<div class="table-wrapper" markdown="block">
+
 | {% include audio_player.html filename="audio/sod/best/3_unconditioned.mp3" style="width:240px;" %} | {% include audio_player.html filename="audio/sod/best/12_unconditioned.mp3" style="width:240px;" %} | {% include audio_player.html filename="audio/sod/best/16_unconditioned.mp3" style="width:240px;" %} | {% include audio_player.html filename="audio/sod/best/23_unconditioned.mp3" style="width:240px;" %} |
 | {% include audio_player.html filename="audio/sod/best/31_unconditioned.mp3" style="width:240px;" %} | {% include audio_player.html filename="audio/sod/best/39_unconditioned.mp3" style="width:240px;" %} | {% include audio_player.html filename="audio/sod/best/43_unconditioned.mp3" style="width:240px;" %} | {% include audio_player.html filename="audio/sod/best/45_unconditioned.mp3" style="width:240px;" %} |
+
+</div>
 
 ### Best instrument-informed generation samples {#best-instrument-informed}
 
 > __Settings__: The model is given a 'start-of-song' event followed by a sequence of instrument codes and a 'start-of-notes' event to start with. The model then generates the note sequence.
 
-|-|-|-|-|
+<div class="table-wrapper" markdown="block">
+
 | __Ensemble__: piano, church-organ, voices | {% include audio_player.html filename="audio/sod/best/7_instrument-informed.mp3" %} |
 | __Ensemble__: contrabass, harp, english-horn, flute | {% include audio_player.html filename="audio/sod/best/40_instrument-informed.mp3" %} |
 | __Ensemble__: trumpet, trombone | {% include audio_player.html filename="audio/sod/best/33_instrument-informed.mp3" %} |
 | __Ensemble__: church-organ, viola, contrabass, strings, voices, horn, oboe | {% include audio_player.html filename="audio/sod/best/10_instrument-informed.mp3" %} |
-{:style="width: 80%; margin-left: auto; margin-right: auto;"}
+
+</div>
 
 ### Best 4-beat continuation samples {#best-4-beat-continuation}
 
 > __Settings__: All instrument and note events in the first 4 beats are provided to the model. The model then generates subsequent note events that continue the input music.
 
-|-|-|-|
+<div class="table-wrapper" markdown="block">
+
 | {% include audio_player.html filename="audio/sod/best/9_4-beat-continuation.mp3" %} | {% include audio_player.html filename="audio/sod/best/19_4-beat-continuation.mp3" %} | {% include audio_player.html filename="audio/sod/best/23_4-beat-continuation.mp3" %}
 | {% include audio_player.html filename="audio/sod/best/26_4-beat-continuation.mp3" %} | {% include audio_player.html filename="audio/sod/best/34_4-beat-continuation.mp3" %} | {% include audio_player.html filename="audio/sod/best/35_4-beat-continuation.mp3" %} |
+
+</div>
 
 ---
 
@@ -89,11 +100,15 @@ University of California San Diego
 
 > __Settings__: Only a `start-of-song' event is provided to the model. The model generates the instrument list and subsequently the note sequence.
 
+<div class="table-wrapper" markdown="block">
+
 | | Sample 1 | Sample 2 | Sample 3 |
 |:-:|:-:|:-:|:-:|
 | MMT (ours) | {% include audio_player.html filename="audio/sod/ape/0_unconditioned.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/ape/1_unconditioned.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/ape/2_unconditioned.mp3" style="width:250px;" %} |
 | MMM        | {% include audio_player.html filename="audio/sod/mmm/0_unconditioned.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/mmm/1_unconditioned.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/mmm/2_unconditioned.mp3" style="width:250px;" %} |
 | REMI+      | {% include audio_player.html filename="audio/sod/remi/0_unconditioned.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/remi/1_unconditioned.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/remi/3_unconditioned.mp3" style="width:250px;" %} |
+
+</div>
 
 ---
 
@@ -101,9 +116,13 @@ University of California San Diego
 
 > __Settings__: The model is given a 'start-of-song' event followed by a sequence of instrument codes and a 'start-of-notes' event to start with. The model then generates the note sequence.
 
+<div class="table-wrapper" markdown="block">
+
 | | Sample  1 | Sample 2 | Sample 3 |
 |:-:|:-:|:-:|:-:|
 | MMT (ours) | {% include audio_player.html filename="audio/sod/ape/0_instrument-informed.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/ape/1_instrument-informed.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/ape/2_instrument-informed.mp3" style="width:250px;" %} |
+
+</div>
 
 ---
 
@@ -111,11 +130,14 @@ University of California San Diego
 
 > __Settings__: All instrument and note events in the first 4 beats are provided to the model. The model then generates subsequent note events that continue the input music.
 
+<div class="table-wrapper" markdown="block">
 
 | | Sample 1 | Sample 2 | Sample 3 |
 |:-:|:-:|:-:|:-:|
 | MMT (ours) | {% include audio_player.html filename="audio/sod/ape/0_4-beat-continuation.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/ape/1_4-beat-continuation.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/ape/2_4-beat-continuation.mp3" style="width:250px;" %} |
 | Ground truth | {% include audio_player.html filename="audio/sod/truth/0_truth.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/truth/1_truth.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/truth/3_truth.mp3" style="width:250px;" %} |
+
+</div>
 
 ---
 
@@ -123,11 +145,14 @@ University of California San Diego
 
 > __Settings__: All instrument and note events in the first 16 beats are provided to the model. The model then generates subsequent note events that continue the input music.
 
+<div class="table-wrapper" markdown="block">
 
 | | Sample 1 | Sample 2 | Sample 3 |
 |:-:|:-:|:-:|:-:|
 | MMT (ours) | {% include audio_player.html filename="audio/sod/ape/0_16-beat-continuation.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/ape/1_16-beat-continuation.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/ape/2_16-beat-continuation.mp3" style="width:250px;" %} |
 | Ground truth | {% include audio_player.html filename="audio/sod/truth/0_truth.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/truth/1_truth.mp3" style="width:250px;" %} | {% include audio_player.html filename="audio/sod/truth/2_truth.mp3" style="width:250px;" %} |
+
+</div>
 
 ---
 
