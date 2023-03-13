@@ -1,3 +1,6 @@
+__Multitrack Music Transformer__
+{:.center .larger}
+
 [Hao-Wen Dong](https://salu133445.github.io/) &emsp;
 [Ke Chen](https://www.knutchen.com/) &emsp;
 [Shlomo Dubnov](http://dub.ucsd.edu/) &emsp;
