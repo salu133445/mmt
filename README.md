@@ -14,10 +14,11 @@ _Proceedings of the IEEE International Conference on Acoustics, Speech and Signa
 
 - [Prerequisites](#prerequisites)
 - [Preprocessing](#preprocessing)
+- [Preprocessed Datasets](#preprocessed-datasets)
 - [Training](#training)
+- [Pretrained Models](#pretrained-models)
 - [Evaluation](#evaluation)
-- [Generation (inference)](#generation-inference)
-- [Pretrained models](#pretrained-models)
+- [Generation (Inference)](#generation-inference)
 - [Citation](#citation)
 
 ## Prerequisites
@@ -88,6 +89,16 @@ Split the processed data into training, validation and test sets.
 python split.py -d sod
 ```
 
+## Preprocessed Datasets
+
+The preprocessed datasets can be found [here](https://drive.google.com/drive/folders/1owWu-Ne8wDoBYCFiF9z11fruJo62m_uK?usp=share_link). You can use [gdown](https://github.com/wkentaro/gdown) to download them via command line as follows.
+
+```sh
+gdown --id 1owWu-Ne8wDoBYCFiF9z11fruJo62m_uK --folder
+```
+
+Extract the files to `data/{DATASET_KEY}/processed/json` and `data/{DATASET_KEY}/processed/notes`, where `DATASET_KEY` is `sod`, `lmd`, `lmd_full` or `snd`.
+
 ## Training
 
 Train a Multitrack Music Transformer model.
@@ -104,6 +115,14 @@ Train a Multitrack Music Transformer model.
 
   `python mmt/train.py -d sod -o exp/sod/npe --no-abs_pos_emb --no-rel_pos_emb -g 0`
 
+## Pretrained Models
+
+The pretrained models can be found [here](https://drive.google.com/drive/folders/1HoKfghXOmiqi028oc_Wv0m2IlLdcJglQ?usp=share_link). You can use [gdown] to download them via command line as follows.
+
+```sh
+gdown --id 1HoKfghXOmiqi028oc_Wv0m2IlLdcJglQ --folder
+```
+
 ## Evaluation
 
 Evaluate the trained model.
@@ -112,7 +131,7 @@ Evaluate the trained model.
 python mmt/evaluate.py -d sod -o exp/sod/ape -ns 100 -g 0
 ```
 
-## Generation (inference)
+## Generation (Inference)
 
 Generate new samples using a trained model.
 
@@ -120,13 +139,9 @@ Generate new samples using a trained model.
 python mmt/generate.py -d sod -o exp/sod/ape -g 0
 ```
 
-## Pretrained models
+## Acknowledgment
 
-The pretrained models can be found [here](https://drive.google.com/drive/folders/1HoKfghXOmiqi028oc_Wv0m2IlLdcJglQ?usp=share_link). You may download them via command line as follows.
-
-```sh
-gdown --id 1HoKfghXOmiqi028oc_Wv0m2IlLdcJglQ --folder
-```
+The code is based largely on the [x-transformers](https://github.com/lucidrains/x-transformers) library developed by [lucidrains](https://github.com/lucidrains).
 
 ## Citation
 
