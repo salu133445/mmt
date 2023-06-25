@@ -11,6 +11,7 @@ University of California San Diego
 
 {% include icon_link.html text="paper" icon=site.icons.paper href="https://arxiv.org/pdf/2207.06983.pdf" %} &emsp;
 {% include icon_link.html text="demo" icon=site.icons.demo href="https://salu133445.github.io/mmt/" %} &emsp;
+{% include icon_link.html text="slides" icon=site.icons.slides href="https://salu133445.github.io/mmt/pdf/mmt_icassp2023_slides.pdf" %} &emsp;
 {% include icon_link.html text="code" icon=site.icons.code href="https://github.com/salu133445/mmt" %} &emsp;
 {% include icon_link.html text="reviews" icon=site.icons.reviews href="https://salu133445.github.io/pdf/mmt-icassp2023-reviews.pdf" %}
 {:.center}
