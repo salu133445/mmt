@@ -1,0 +1,6 @@
+name: demo
+channels:
+  - conda-forge
+dependencies:
+  - ruby
+  - compilers
