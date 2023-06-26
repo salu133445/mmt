@@ -158,7 +158,7 @@ University of California San Diego
 
 ---
 
-## Citation
+## Citation {#citation}
 
 > Hao-Wen Dong, Ke Chen, Shlomo Dubnov, Julian McAuley and Taylor Berg-Kirkpatrick, "Multitrack Music Transformer," _Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)_, 2023.
 
