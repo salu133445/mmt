@@ -175,7 +175,8 @@ ul,
 ol,
 table,
 pre,
-dl {
+dl,
+details {
   margin: 0 0 20px;
 }
 
@@ -216,10 +217,28 @@ blockquote {
   color: #222;
 }
 
-img {
-  max-width: 100%;
+img,
+audio,
+video {
+  display: block;
   margin-left: auto;
   margin-right: auto;
+}
+
+img {
+  width: 100%;
+  max-width: 600px;
+  border-radius: 5px;
+}
+
+audio {
+  max-width: 100%;
+}
+
+video {
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 20px;
   border-radius: 5px;
 }
 
@@ -394,6 +413,10 @@ footer {
 
 .width-400 {
   max-width: 400px;
+}
+
+.margin-bottom {
+  margin-bottom: 20px;
 }
 
 @media print,

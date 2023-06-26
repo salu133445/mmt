@@ -17,7 +17,7 @@ University of California San Diego
 {% include icon_link.html text="reviews" icon=site.icons.reviews href="https://salu133445.github.io/pdf/mmt_icassp2023_reviews.pdf" %}
 {:.center}
 
-{% include video_player.html id="7g0F0lMs18Y" %}
+{% include youtube_player.html id="7g0F0lMs18Y" %}
 
 ---
 
@@ -55,7 +55,7 @@ University of California San Diego
 
 </div>
 
-> __Note__: All the samples are generated in single pass through the model using a sequence legnth of 1024. Thus, the generated music is usually shorter for a more complex ensemble than a simple ensemble.
+> __Note__: All the samples are generated in single pass through the model using a sequence length of 1024. Thus, the generated music is usually shorter for a more complex ensemble than a simple ensemble.
 
 ---
 
