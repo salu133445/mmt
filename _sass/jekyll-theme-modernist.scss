@@ -176,7 +176,9 @@ ol,
 table,
 pre,
 dl,
-details {
+details,
+audio,
+video {
   margin: 0 0 20px;
 }
 
@@ -271,6 +273,11 @@ table {
   margin-left: auto;
   margin-right: auto;
   border-collapse: collapse;
+}
+
+table audio,
+table .video-container {
+  margin: 0;
 }
 
 th,
