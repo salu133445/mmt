@@ -74,7 +74,7 @@ We also support the following two datasets:
 Get a list of filenames for each dataset.
 
 ```sh
-find data/sod/SOD -type f -name *.mid -o -name *.xml | cut -c 14- > data/sod/original-names.txt
+find data/sod/SOD -type f -name '*.mid' -o -name '*.xml' | cut -c 14- > data/sod/original-names.txt
 ```
 
 > Note: Change the number in the cut command for different datasets.
@@ -84,7 +84,7 @@ find data/sod/SOD -type f -name *.mid -o -name *.xml | cut -c 14- > data/sod/ori
 Convert the MIDI and MusicXML files into MusPy files for processing.
 
 ```sh
-python convert_sod.py
+python mmt/convert_sod.py
 ```
 
 > Note: You may enable multiprocessing with the `-j` option, for example, `python convert_sod.py -j 10` for 10 parallel jobs.
@@ -94,7 +94,7 @@ python convert_sod.py
 Extract a list of notes from the MusPy JSON files.
 
 ```sh
-python extract.py -d sod
+python mmt/extract.py -d sod
 ```
 
 #### Step 5 -- Split training/validation/test sets
@@ -102,7 +102,7 @@ python extract.py -d sod
 Split the processed data into training, validation and test sets.
 
 ```sh
-python split.py -d sod
+python mmt/split.py -d sod
 ```
 
 ## Training

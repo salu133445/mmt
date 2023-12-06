@@ -204,7 +204,7 @@ def main():
             args.out_dir = pathlib.Path(f"exp/test_{args.dataset}")
 
     # Make sure the output directory exists
-    args.out_dir.mkdir(exist_ok=True)
+    args.out_dir.mkdir(parents=True, exist_ok=True)
     (args.out_dir / "checkpoints").mkdir(exist_ok=True)
 
     # Set up the logger
