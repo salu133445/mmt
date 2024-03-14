@@ -35,11 +35,7 @@ conda env create -f environment.yml
 
 ### Preprocessed Datasets
 
-The preprocessed datasets can be found [here](https://drive.google.com/drive/folders/1owWu-Ne8wDoBYCFiF9z11fruJo62m_uK?usp=share_link). You can use [gdown](https://github.com/wkentaro/gdown) to download them via command line as follows.
-
-```sh
-gdown --id 1owWu-Ne8wDoBYCFiF9z11fruJo62m_uK --folder
-```
+The preprocessed datasets can be found [here](https://ucsdcloud-my.sharepoint.com/:f:/g/personal/h3dong_ucsd_edu/Er7nrsVc7NhNtYVSdWpHMQwBS5U1dXo0q0eQEi2LW-DVGw).
 
 Extract the files to `data/{DATASET_KEY}/processed/json` and `data/{DATASET_KEY}/processed/notes`, where `DATASET_KEY` is `sod`, `lmd`, `lmd_full` or `snd`.
 
@@ -109,11 +105,7 @@ python split.py -d sod
 
 ### Pretrained Models
 
-The pretrained models can be found [here](https://drive.google.com/drive/folders/1HoKfghXOmiqi028oc_Wv0m2IlLdcJglQ?usp=share_link). You can use [gdown] to download all the pretrained models via command line as follows.
-
-```sh
-gdown --id 1HoKfghXOmiqi028oc_Wv0m2IlLdcJglQ --folder
-```
+The pretrained models can be found [here](https://ucsdcloud-my.sharepoint.com/:f:/g/personal/h3dong_ucsd_edu/EqYq6KHrcltHvgJTmw7Nl6MBtv4szg4RUZUPXc4i_RgEkw).
 
 ### Training Scripts
 
@@ -155,7 +147,7 @@ The code is based largely on the [x-transformers](https://github.com/lucidrains/
 
 Please cite the following paper if you use the code provided in this repository.
 
- > Hao-Wen Dong, Ke Chen, Shlomo Dubnov, Julian McAuley and Taylor Berg-Kirkpatrick, "Multitrack Music Transformer," _IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)_, 2023.
+ > Hao-Wen Dong, Ke Chen, Shlomo Dubnov, Julian McAuley, and Taylor Berg-Kirkpatrick, "Multitrack Music Transformer," _IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)_, 2023.
 
 ```bibtex
 @inproceedings{dong2023mmt,
